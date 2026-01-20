@@ -1,3 +1,5 @@
+## Giới thiệu
+
 Phạm Văn Đồng (1 tháng 3 năm 1906 – 29 tháng 4 năm 2000), bí danh Anh Tô, là một nhà cách mạng, nhà ngoại giao và chính khách người Việt Nam. Ông từng giữ chức Thủ tướng đầu tiên của nước Cộng hòa Xã hội chủ nghĩa Việt Nam từ năm 1976 (từ năm 1981 gọi là Chủ tịch Hội đồng Bộ trưởng) cho đến khi nghỉ hưu năm 1987. Trước đó ông từng giữ chức vụ Thủ tướng Chính phủ Việt Nam Dân chủ Cộng hòa từ năm 1955 đến năm 1976.
 
 Phạm Văn Đồng là vị Thủ tướng Việt Nam tại vị lâu nhất (1955–1987) và là học trò, cộng sự thân thiết của Chủ tịch Hồ Chí Minh. Ông có tên gọi thân mật là Tô, đây từng là bí danh của ông. Ông còn có tên gọi là Lâm Bá Kiệt khi làm Phó chủ nhiệm cơ quan Biện sự xứ tại Quế Lâm (chủ nhiệm là Hồ Học Lãm).
@@ -82,7 +84,7 @@ Chính phủ Trung Quốc ra Tuyên bố về lãnh hải 12 hải lý ngày 4 t
 
 [Hình ảnh: Năm 1958, Công hàm của Thủ tướng Việt Nam dân chủ cộng hòa Phạm Văn Đồng gửi cho thủ tướng Cộng hòa Nhân dân Trung HoaChu Ân Lai]
 
->   *Thủ tướng Việt Nam Dân chủ Cộng hòa: Phạm Văn Đồng gửi thứ trưởng Bộ Ngoại giao Trung Quốc, ghi nhận và tán thành bản tuyên bố ngày 4 tháng 9 năm 1958 của chính phủ Trung Quốc về hải phận*.
+> _Thủ tướng Việt Nam Dân chủ Cộng hòa: Phạm Văn Đồng gửi thứ trưởng Bộ Ngoại giao Trung Quốc, ghi nhận và tán thành bản tuyên bố ngày 4 tháng 9 năm 1958 của chính phủ Trung Quốc về hải phận_.
 
 Theo quan điểm của Trung Quốc (tài liệu Bộ Ngoại giao), công hàm của Thủ tướng nước Việt Nam Dân Chủ Cộng Hoà Phạm Văn Đồng đương nhiên "công nhận" chủ quyền của Trung Quốc đối với các quần đảo trên biển Đông vì trước đó trong số báo ngày 6 tháng 9 báo Nhân dân "đã đăng chi tiết về Tuyên bố Lãnh hải của chính phủ Trung Quốc trong đó đường cơ sở để tính lãnh hải bao gồm bờ biển hai quần đảo Tây Sa và Nam Sa trên biển Đông". Các tài liệu công bố công khai cho công chúng Trung Quốc bản dịch tiếng Trung đều không dịch đầy đủ nội dung của văn kiện này, thiếu một số nội dung trong đó có đoạn "triệt để tôn trọng hải phận 12 hải lý của Trung Quốc".
 
@@ -96,7 +98,7 @@ Theo Tuyên bố của Bộ Ngoại giao nước Cộng hòa XHCN Việt Nam v�
 
 Với bề dày hơn 70 năm hoạt động trong sự nghiệp Cách mạng của Đảng Cộng sản Việt Nam, trong đó nhiều năm giữ các cương vị lãnh đạo chủ chốt, Phạm Văn Đồng được nhiều nhà lãnh đạo của Đảng Cộng sản và học giả trong nước, những người gần gũi với ông đánh giá là có nhiều đóng góp quan trọng trên nhiều lĩnh vực.
 
-Thủ tướng Võ Văn Kiệt nhận xét về ông "*tác phong giản dị mà lịch thiệp*", "*lối sống đạm bạc mà văn hóa*" "*rất mực ôn hòa*" "*hết mức bình dị*" và "*Năm trước, ở bài viết trong cuốn sách kỷ niệm về anh Sáu Thọ, tôi có nhắc tới biệt danh "Sáu Búa" thể hiện tính quyết đoán cao và sự thẳng thắn trong đấu tranh nội bộ của anh Sáu. Với Anh Tô, tôi thấy dường như Anh là sự bù trừ cho anh Sáu và một số anh khác*".
+Thủ tướng Võ Văn Kiệt nhận xét về ông "_tác phong giản dị mà lịch thiệp_", "_lối sống đạm bạc mà văn hóa_" "_rất mực ôn hòa_" "_hết mức bình dị_" và "_Năm trước, ở bài viết trong cuốn sách kỷ niệm về anh Sáu Thọ, tôi có nhắc tới biệt danh "Sáu Búa" thể hiện tính quyết đoán cao và sự thẳng thắn trong đấu tranh nội bộ của anh Sáu. Với Anh Tô, tôi thấy dường như Anh là sự bù trừ cho anh Sáu và một số anh khác_".
 
 ## Vinh danh
 
@@ -104,20 +106,20 @@ Hiện nay ở thủ đô Hà Nội, tên Phạm Văn Đồng được đặt ch
 
 ## Xem thêm
 
-* Thủ tướng Việt Nam
+- Thủ tướng Việt Nam
 
-|  |  |  |
-| --- | --- | --- |
-| Tiền nhiệm: Hồ Chí Minh | Thủ tướng nước Việt Nam Dân chủ Cộng hòa 20-9-1955–2-7-1976 | Kế nhiệm: Không có |
-| Tiền nhiệm: Không có | Thủ tướng (Chủ tịch Hội đồng Bộ trưởng) nước Cộng hòa Xã hội chủ nghĩa Việt Nam 2-7-1976–18-6-1987 | Kế nhiệm: Phạm Hùng |
+|                         |                                                                                                    |                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------- | ------------------- |
+| Tiền nhiệm: Hồ Chí Minh | Thủ tướng nước Việt Nam Dân chủ Cộng hòa 20-9-1955–2-7-1976                                        | Kế nhiệm: Không có  |
+| Tiền nhiệm: Không có    | Thủ tướng (Chủ tịch Hội đồng Bộ trưởng) nước Cộng hòa Xã hội chủ nghĩa Việt Nam 2-7-1976–18-6-1987 | Kế nhiệm: Phạm Hùng |
 
-Wikimedia Commons có thêm hình ảnh và phương tiện về *Phạm Văn Đồng*.
+Wikimedia Commons có thêm hình ảnh và phương tiện về _Phạm Văn Đồng_.
 
 Wikiquote có bộ sưu tập danh ngôn về:
 
-*Phạm Văn Đồng*
+_Phạm Văn Đồng_
 
-* Tiểu sử Phạm Văn Đồng trên website Bộ Ngoại giao Việt Nam.
-* Phỏng vấn Phạm Văn Đồng, 1981
-* Phạm Văn Đồng tại Từ điển bách khoa Việt Nam
-* Nhìn lại Công hàm Phạm Văn Đồng 1958 BBC
+- Tiểu sử Phạm Văn Đồng trên website Bộ Ngoại giao Việt Nam.
+- Phỏng vấn Phạm Văn Đồng, 1981
+- Phạm Văn Đồng tại Từ điển bách khoa Việt Nam
+- Nhìn lại Công hàm Phạm Văn Đồng 1958 BBC

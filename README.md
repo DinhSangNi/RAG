@@ -2,13 +2,16 @@
 
 Hệ thống RAG (Retrieval-Augmented Generation) sử dụng Hybrid Search (BM25 + Semantic) và Google Gemini để trả lời câu hỏi dựa trên dữ liệu Wikipedia.
 
+> **🔄 UPDATE**: Hệ thống đã được chuyển từ ChromaDB sang **Pinecone** - xem chi tiết tại [PINECONE_MIGRATION.md](PINECONE_MIGRATION.md)
+
 ## 📋 Yêu Cầu
 
 ```bash
 pip install langchain langchain-community langchain-google-genai
-pip install chromadb
+pip install pinecone-client langchain-pinecone
 pip install beautifulsoup4 requests
 pip install rank_bm25
+pip install python-dotenv
 ```
 
 hoặc chạy
@@ -16,6 +19,25 @@ hoặc chạy
 ```bash
 pip install -r requirements.txt
 ```
+
+## ⚙️ Cấu Hình
+
+1. **Tạo file `.env`** từ template:
+
+   ```bash
+   copy .env.example .env
+   ```
+
+2. **Điền API Keys** vào file `.env`:
+
+   ```env
+   PINECONE_API_KEY=your_pinecone_api_key_here
+   GOOGLE_API_KEY=your_google_api_key_here
+   ```
+
+3. **Lấy Pinecone API Key**:
+   - Đăng ký tại [https://www.pinecone.io/](https://www.pinecone.io/)
+   - Tạo API key từ dashboard
 
 ## 🏃 Cách Chạy Chương Trình
 
@@ -61,21 +83,21 @@ CHỌN CHỨC NĂNG:
 
 ### Option 2: 🔪 Chunking và Lưu vào Vector DB
 
-**Chức năng:** Tách văn bản thành chunks và lưu vào ChromaDB
+**Chức năng:** Tách văn bản thành chunks và lưu vào Pinecone
 
 **Cách hoạt động:**
 
 - Đọc tất cả file `.md` trong `data/processed_data/`
 - Tách theo Markdown headers (h1, h2)
-- Lưu vào ChromaDB với embedding Google AI
+- Lưu vào Pinecone với embedding Google AI
 - Tạo file pickle cho BM25 search
 
 **Kết quả:**
 
-- Vector DB: `data/chroma_db/`
-- Pickle file: `data/chroma_db/knowledge_base_chunks.pkl`
+- Pinecone Index: `knowledge-base`
+- Pickle file: `data/chunks/knowledge_base_chunks.pkl`
 
-**Collection name:** `knowledge_base` (mặc định)
+**Index name:** `knowledge-base` (mặc định)
 
 ---
 
@@ -127,11 +149,12 @@ CHỌN CHỨC NĂNG:
 
 ```
 RAG/
+├── .env.example                     # Template cho environment variables
+├── .env                             # API Keys (không commit!)
 ├── data/
 │   ├── raw_data/wikipedia/          # HTML gốc từ Wikipedia
 │   ├── processed_data/              # File Markdown đã xử lý
-│   └── chroma_db/                   # Vector database
-│       ├── chroma.sqlite3
+│   └── chunks/                      # Pickle files cho BM25
 │       └── knowledge_base_chunks.pkl
 ├── src/
 │   ├── main.py                      # File chính
@@ -143,7 +166,8 @@ RAG/
 │   └── preprocessing/
 │       ├── html_cleaner.py
 │       └── normalize_markdown.py
-└── README.md
+├── README.md
+└── PINECONE_MIGRATION.md            # Hướng dẫn migration
 ```
 
 ## ⚙️ Cấu Hình
@@ -180,10 +204,22 @@ chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
 ### Lỗi: File pkl không tồn tại
 
 ```
-❌ Lỗi: [Errno 2] No such file or directory: 'data/chroma_db\\knowledge_base_chunks.pkl'
+❌ Lỗi: [Errno 2] No such file or directory: 'data/chunks\\knowledge_base_chunks.pkl'
 ```
 
-**Giải pháp:** Chạy Option 2 để tạo vector DB
+**Giải pháp:** Chạy Option 2 để tạo chunks và upload lên Pinecone
+
+### Lỗi: Invalid Pinecone API Key
+
+```
+❌ Lỗi: Invalid API key
+```
+
+**Giải pháp:**
+
+1. Kiểm tra file `.env`
+2. Đảm bảo `PINECONE_API_KEY` được set đúng
+3. Không có khoảng trắng thừa
 
 ### Lỗi: Không trả lời được câu hỏi
 
@@ -195,23 +231,13 @@ chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
 2. Điều chỉnh weights (tăng semantic_weight)
 3. Tăng `top_k` để retrieve nhiều chunks hơn
 
-### Lỗi: LangChainDeprecationWarning
+### Lỗi: Index not found
 
 ```
-LangChainDeprecationWarning: The class `Chroma` was deprecated...
+❌ Lỗi: Index 'knowledge-base' not found
 ```
 
-**Giải pháp:**
-
-```bash
-pip install -U langchain-chroma
-```
-
-Sau đó thay đổi import:
-
-```python
-from langchain_chroma import Chroma
-```
+**Giải pháp:** Chạy Option 2 để tạo index trên Pinecone
 
 ## 📝 Ví Dụ Câu Hỏi
 

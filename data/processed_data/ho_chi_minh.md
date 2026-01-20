@@ -1,3 +1,5 @@
+## Tổng quan
+
 Hồ Chí Minh (chữ Nho: 胡志明; sinh vào ngày 19 tháng 5 năm 1890 – 2 tháng 9 năm 1969), tên khai sinh là Nguyễn Sinh Cung (chữ Nho: 阮生恭), còn được gọi phổ biến tại Việt Nam với tên gọi Bác Hồ, là một nhà cách mạng và chính khách người Việt Nam. Ông là người sáng lập Đảng Cộng sản Việt Nam, từng là Chủ tịch nước Việt Nam Dân chủ Cộng hòa từ 1945–1969, Thủ tướng Việt Nam Dân chủ Cộng hòa trong những năm 1945–1955, Tổng Bí thư Ban Chấp hành Trung ương Đảng Lao động Việt Nam từ 1956–1960, Chủ tịch Ban Chấp hành Trung ương Đảng Lao động Việt Nam từ năm 1951 cho đến khi qua đời.
 
 Trong quãng thời gian sinh sống và hoạt động trước khi lên nắm quyền, Hồ Chí Minh đã đi qua nhiều quốc gia và châu lục, ông được cho là đã sử dụng từ 50 đến 200 bí danh khác nhau. Về mặt tư tưởng chính trị, Hồ Chí Minh là một người theo chủ nghĩa Marx–Lenin. Ông là nhà lãnh đạo phong trào độc lập Việt Minh tiến hành Cách mạng Tháng Tám năm 1945. Ông cũng là người đã soạn thảo, đọc bản Tuyên ngôn độc lập thành lập nước Việt Nam Dân chủ Cộng hòa, và trở thành Chủ tịch nước sau cuộc tổng tuyển cử năm 1946.
@@ -467,13 +469,11 @@ Ngày sinh nhật lần thứ 100 của Hồ Chí Minh được đoàn Việt Na
 > 1. Lưu ý là năm 1890 đánh dấu 100 năm ngày sinh của Chủ tịch Hồ Chí
 >    Minh, anh hùng giải phóng đất nước và danh nhân văn hóa
 >    người Việt,
->
 > 2. Khuyến nghị các nước thành viên tham gia vào việc kỷ niệm ngày
 >    sinh lần thứ 100 của Chủ tịch Hồ Chí Minh bằng cách tổ chức những sự kiện
 >    tưởng nhớ đến ông, để tuyên truyền rộng rãi những hiểu biết về sự vĩ đại
 >    của những tư tưởng và những việc Hồ Chí Minh đã làm cho sự nghiệp giải
 >    phóng dân tộc;
->
 > 3. Yêu cầu Tổng Giám đốc UNESCO thực hiện các bước thích hợp để kỷ
 >    niệm ngày sinh lần thứ 100 của Chủ tịch Hồ Chí Minh và hỗ trợ các hoạt
 >    động kỷ niệm được tổ chức trong dịp này, đặc biệt các hoạt động tổ chức

@@ -4,7 +4,6 @@ import os
 import pickle
 import traceback
 
-from langchain_community.vectorstores import Chroma
 from src.ingestion.get_data_from_wikipedia import get_html_page_from_wikipedia
 from src.preprocessing.html_cleaner import clean_wikipedia_html
 from src.preprocessing.normalize_markdown import convert_html_to_normalized_md
@@ -59,14 +58,12 @@ def chunking():
         print(f"\n❌ Không tìm thấy file markdown nào trong {md_dir}")
         return None
     
-    print(f"\n📁 Tìm thấy {len(md_files)} file markdown:")
+    print(f"\n💫 {len(md_files)} file markdown:")
     for i, f in enumerate(md_files, 1):
         print(f"  {i}. {f}")
     
-    # collection_name = input("\nNhập tên collection (hoặc Enter để dùng 'knowledge_base'): ").strip()
-    # if not collection_name:
-    #     collection_name = "knowledge_base"
-    collection_name = "knowledge_base"
+    index_name = "knowledge-base"
+    chunks_dir = "data/chunks"
     
     try:
         chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
@@ -119,37 +116,60 @@ def chunking():
         print(f"   - Tổng số file: {len(md_files)}")
         print(f"   - Tổng số chunks: {len(all_chunks)}")
         
-        # Lưu vào Chroma
-        print(f"\n💾 Đang lưu vào Chroma DB...")
+        # Lưu vào Pinecone
+        print(f"\n💾 Đang lưu vào Pinecone...")
         
-        persist_directory = "data/chroma_db"
+        os.makedirs(chunks_dir, exist_ok=True)
         
-        # Xóa DB cũ nếu có
-        if os.path.exists(persist_directory):
-            import shutil
-            print(f"🗑️  Xóa DB cũ...")
-            shutil.rmtree(persist_directory)
+        # Import Pinecone components
+        from langchain_pinecone import PineconeVectorStore
+        from pinecone import Pinecone, ServerlessSpec
+        import time
         
-        os.makedirs(persist_directory, exist_ok=True)
+        PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "YOUR_PINECONE_API_KEY_HERE")
+        pc = Pinecone(api_key=PINECONE_API_KEY)
         
-        Chroma.from_documents(
+        # Xóa index cũ nếu có
+        existing_indexes = [idx.name for idx in pc.list_indexes()]
+        if index_name in existing_indexes:
+            print(f"🗑️  Xóa index cũ: {index_name}")
+            pc.delete_index(index_name)
+            time.sleep(1)
+        
+        # Tạo index mới
+        print(f"🔧 Tạo Pinecone index mới: {index_name}")
+        pc.create_index(
+            name=index_name,
+            dimension=768,  # Google text-embedding-004
+            metric='cosine',
+            spec=ServerlessSpec(
+                cloud='aws',
+                region='us-east-1'
+            )
+        )
+        
+        # Đợi index được tạo xong
+        while not pc.describe_index(index_name).status['ready']:
+            time.sleep(1)
+        print(f"✅ Index {index_name} đã sẵn sàng!")
+        
+        PineconeVectorStore.from_documents(
             documents=all_chunks,
             embedding=chunker.embeddings,
-            collection_name=collection_name,
-            persist_directory=persist_directory
+            index_name=index_name
         )
         
         # Lưu chunks vào pickle
-        chunks_file_path = os.path.join(persist_directory, f"{collection_name}_chunks.pkl")
+        chunks_file_path = os.path.join(chunks_dir, f"{index_name.replace('-', '_')}_chunks.pkl")
         with open(chunks_file_path, 'wb') as f:
             pickle.dump(all_chunks, f)
         print(f"💾 Đã lưu chunks vào {chunks_file_path}")
         
         print(f"\n✅ ĐÃ HOÀN THÀNH!")
-        print(f"   📦 Collection: {collection_name}")
-        print(f"   💾 Lưu tại: {persist_directory}")
+        print(f"   📦 Index: {index_name}")
+        print(f"   💾 Chunks lưu tại: {chunks_dir}")
         
-        return collection_name
+        return index_name
     except Exception as e:
         print(f"\n❌ Lỗi: {e}")
         traceback.print_exc()

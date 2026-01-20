@@ -1,29 +1,28 @@
-"""
-RAG Chat với LLM (Google Gemini)
-Sử dụng Hybrid Search (BM25 + Semantic) để retrieve context
-"""
-
+import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from src.chunking.text_chunker import HybridSectionChunker
+from dotenv import load_dotenv
 
-GEMINI_API_KEY = "AIzaSyBNttcNw7KFGbXGgNWz3oEH1wAFiJSbqIM"
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 
 class RAGChat:
     
     def __init__(self, 
-                 collection_name="knowledge_base",
-                 persist_directory="data/chroma_db",
+                 index_name="knowledge-base",
+                 chunks_dir="data/chunks",
                  model_name="gemini-2.5-flash-lite",
                  temperature=0.1,
                  top_k=5,
-                 bm25_weight=0.6,
-                 semantic_weight=0.4):
+                 bm25_weight=0.5,
+                 semantic_weight=0.5):
         
-        self.collection_name = collection_name
-        self.persist_directory = persist_directory
+        self.index_name = index_name
+        self.chunks_dir = chunks_dir
         self.top_k = top_k
         self.bm25_weight = bm25_weight
         self.semantic_weight = semantic_weight
@@ -87,8 +86,8 @@ TRẢ LỜI:"""),
         
         results = self.chunker.query_with_hybrid_search(
             query=query,
-            collection_name=self.collection_name,
-            persist_directory=self.persist_directory,
+            index_name=self.index_name,
+            chunks_dir=self.chunks_dir,
             k=self.top_k,
             bm25_weight=self.bm25_weight,
             semantic_weight=self.semantic_weight
@@ -144,8 +143,8 @@ TRẢ LỜI:"""),
 
 def interactive_chat():
     rag = RAGChat(
-        collection_name="knowledge_base",
-        persist_directory="data/chroma_db",
+        index_name="knowledge-base",
+        chunks_dir="data/chunks",
         model_name="gemini-2.5-flash-lite",
         temperature=0.1,
         top_k=10,

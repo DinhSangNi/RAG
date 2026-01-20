@@ -1,15 +1,21 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
+from pinecone import Pinecone, ServerlessSpec
 import os
-import shutil
 import pickle
+import time
+from dotenv import load_dotenv
 
-EMBEDDING_MODEL_NAME = "models/text-embedding-004"
-GEMINII_API_KEY = "AIzaSyBNttcNw7KFGbXGgNWz3oEH1wAFiJSbqIM"
+load_dotenv()
+
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "models/text-embedding-004")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+DIMENSION_OF_MODEL = os.getenv("DIMENSION_OF_MODEL")
 
 class HybridSectionChunker:
     
@@ -21,7 +27,7 @@ class HybridSectionChunker:
         self.headers_to_split_on = [
             ("#", "h1"),
             ("##", "h2"),
-            # ("###", "h3"),
+            ("###", "h3"),
             # ("####", "h4")
         ]
         self.section_splitter = MarkdownHeaderTextSplitter(
@@ -38,11 +44,38 @@ class HybridSectionChunker:
         
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=EMBEDDING_MODEL_NAME,
-            api_key=GEMINII_API_KEY
+            api_key=GEMINI_API_KEY
         )
+        
+        # Khởi tạo Pinecone
+        self.pc = Pinecone(api_key=PINECONE_API_KEY)
     
-    def chunk_and_save_to_db(self, md_file_path, collection_name="knowledge_base", 
-                             persist_directory="data/chroma_db", reset=False):
+    def _get_or_create_index(self, index_name):
+        """Tạo hoặc lấy Pinecone index"""
+        existing_indexes = [index.name for index in self.pc.list_indexes()]
+        
+        if index_name not in existing_indexes:
+            print(f"🔧 Tạo Pinecone index mới: {index_name}")
+            self.pc.create_index(
+                name=index_name,
+                dimension=int(DIMENSION_OF_MODEL), 
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-east-1'
+                )
+            )
+            # Đợi index được tạo xong
+            while not self.pc.describe_index(index_name).status['ready']:
+                time.sleep(1)
+            print(f"✅ Index {index_name} đã sẵn sàng!")
+        else:
+            print(f"✅ Sử dụng index có sẵn: {index_name}")
+        
+        return self.pc.Index(index_name)
+    
+    def chunk_and_save_to_db(self, md_file_path, index_name="knowledge-base", 
+                             chunks_dir="data/chunks", reset=False):
         
         print(f"\n🔪 HYBRID SECTION CHUNKING")
         print(f"="*70)
@@ -50,11 +83,16 @@ class HybridSectionChunker:
         print(f"📏 Chunk size: {self.chunk_size}")
         print(f"🔗 Chunk overlap: {self.chunk_overlap}")
         
-        if reset and os.path.exists(persist_directory):
-            print(f"🗑️  Xóa DB cũ...")
-            shutil.rmtree(persist_directory)
+        # Tạo thư mục lưu chunks pickle
+        os.makedirs(chunks_dir, exist_ok=True)
         
-        os.makedirs(persist_directory, exist_ok=True)
+        # Xóa index cũ nếu reset
+        if reset:
+            existing_indexes = [idx.name for idx in self.pc.list_indexes()]
+            if index_name in existing_indexes:
+                print(f"🗑️  Xóa index cũ: {index_name}")
+                self.pc.delete_index(index_name)
+                time.sleep(1)
         
         # Load document
         with open(md_file_path, 'r', encoding='utf-8') as f:
@@ -92,27 +130,28 @@ class HybridSectionChunker:
         
         print(f"   → {len(final_chunks)} chunks cuối cùng")
         
-        # Step 3: Lưu vào Chroma (cho semantic search)
-        print(f"\n💾 Bước 3: Lưu vào Chroma DB...")
-        vectorstore = Chroma.from_documents(
+        # Step 3: Lưu vào Pinecone (cho semantic search)
+        print(f"\n💾 Bước 3: Lưu vào Pinecone...")
+        self._get_or_create_index(index_name)
+        
+        vectorstore = PineconeVectorStore.from_documents(
             documents=final_chunks,
             embedding=self.embeddings,
-            collection_name=collection_name,
-            persist_directory=persist_directory
+            index_name=index_name
         )
         
         # Step 4: Lưu chunks vào pickle (cho BM25)
-        chunks_file = os.path.join(persist_directory, f"{collection_name}_chunks.pkl")
+        chunks_file = os.path.join(chunks_dir, f"{index_name.replace('-', '_')}_chunks.pkl")
         with open(chunks_file, 'wb') as f:
             pickle.dump(final_chunks, f)
         print(f"💾 Đã lưu chunks vào {chunks_file}")
         
         print(f"\n✅ HOÀN TẤT!")
         print(f"📊 {len(section_docs)} sections → {len(final_chunks)} chunks")
-        print(f"💾 Lưu tại: {persist_directory}")
+        print(f"💾 Lưu vào Pinecone index: {index_name}")
     
-    def query_with_hybrid_search(self, query, collection_name="knowledge_base", 
-                                  persist_directory="data/chroma_db", k=5,
+    def query_with_hybrid_search(self, query, index_name="knowledge-base", 
+                                  chunks_dir="data/chunks", k=5,
                                   bm25_weight=0.5, semantic_weight=0.5):
         
         print(f"\n🔍 HYBRID SEARCH QUERY")
@@ -122,15 +161,14 @@ class HybridSectionChunker:
         print(f"⚖️ Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
         
         # Load vectorstore
-        print(f"\n📂 Đang load vectorstore...")
-        vectorstore = Chroma(
-            collection_name=collection_name,
-            persist_directory=persist_directory,
-            embedding_function=self.embeddings
+        print(f"\n📂 Đang load Pinecone vectorstore...")
+        vectorstore = PineconeVectorStore(
+            index_name=index_name,
+            embedding=self.embeddings
         )
         
         # Load chunks cho BM25
-        chunks_file = os.path.join(persist_directory, f"{collection_name}_chunks.pkl")
+        chunks_file = os.path.join(chunks_dir, f"{index_name.replace('-', '_')}_chunks.pkl")
         with open(chunks_file, 'rb') as f:
             chunks = pickle.load(f)
         print(f"📂 Đã load {len(chunks)} chunks")
@@ -152,6 +190,9 @@ class HybridSectionChunker:
         )
         
         # Query
+        print(f"\n vector query...")
+        vector_query = self.embeddings.embed_query(query)
+        print(vector_query)
         print(f"\n🔎 Đang search...")
         results = hybrid_retriever.invoke(query)
         
