@@ -1,6 +1,6 @@
 ## Giới thiệu
 
-Phạm Văn Đồng (1 tháng 3 năm 1906 – 29 tháng 4 năm 2000), bí danh Anh Tô, là một nhà cách mạng, nhà ngoại giao và chính khách người Việt Nam. Ông từng giữ chức Thủ tướng đầu tiên của nước Cộng hòa Xã hội chủ nghĩa Việt Nam từ năm 1976 (từ năm 1981 gọi là Chủ tịch Hội đồng Bộ trưởng) cho đến khi nghỉ hưu năm 1987. Trước đó ông từng giữ chức vụ Thủ tướng Chính phủ Việt Nam Dân chủ Cộng hòa từ năm 1955 đến năm 1976.
+Phạm Văn Đồng (sinh vào ngày 1 tháng 3 năm 1906 – mất vào ngày 29 tháng 4 năm 2000), bí danh Anh Tô, là một nhà cách mạng, nhà ngoại giao và chính khách người Việt Nam. Ông từng giữ chức Thủ tướng đầu tiên của nước Cộng hòa Xã hội chủ nghĩa Việt Nam từ năm 1976 (từ năm 1981 gọi là Chủ tịch Hội đồng Bộ trưởng) cho đến khi nghỉ hưu năm 1987. Trước đó ông từng giữ chức vụ Thủ tướng Chính phủ Việt Nam Dân chủ Cộng hòa từ năm 1955 đến năm 1976.
 
 Phạm Văn Đồng là vị Thủ tướng Việt Nam tại vị lâu nhất (1955–1987) và là học trò, cộng sự thân thiết của Chủ tịch Hồ Chí Minh. Ông có tên gọi thân mật là Tô, đây từng là bí danh của ông. Ông còn có tên gọi là Lâm Bá Kiệt khi làm Phó chủ nhiệm cơ quan Biện sự xứ tại Quế Lâm (chủ nhiệm là Hồ Học Lãm).
 

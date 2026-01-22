@@ -28,7 +28,7 @@ class RAGChat:
         self.semantic_weight = semantic_weight
         
         # Khởi tạo chunker (dùng để retrieve)
-        self.chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
+        self.chunker = HybridSectionChunker(chunk_size=1000, chunk_overlap=150, child_chunk_size=300)
         
         # Khởi tạo LLM
         print(f"🤖 Khởi tạo {model_name}...")
@@ -112,7 +112,8 @@ TRẢ LỜI:"""),
             print(f"{'='*70}")
             for i, doc in enumerate(docs, 1):
                 print(f"\n📄 Chunk {i}:")
-                print(f"   Headers: {doc.metadata.get('h1', '')} / {doc.metadata.get('h2', '')}")
+                # print(f"   Headers: {doc.metadata.get('h1', '')} / {doc.metadata.get('h2', '')}")
+                print(f"Metadata: {doc.metadata}")
                 print(f"   Content: {doc.page_content[:200]}...")
                 print(f"   {'-'*70}")
         
@@ -148,8 +149,8 @@ def interactive_chat():
         model_name="gemini-2.5-flash-lite",
         temperature=0.1,
         top_k=10,
-        bm25_weight=0.5,
-        semantic_weight=0.5
+        bm25_weight=0.0,
+        semantic_weight=1.0
     )
     
     print(f"\n{'='*70}")

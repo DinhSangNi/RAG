@@ -66,108 +66,67 @@ def chunking():
     chunks_dir = "data/chunks"
     
     try:
-        chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
-        all_chunks = []
-        
-        print(f"\n🔄 Bắt đầu chunking...")
-        
-        for idx, md_file in enumerate(md_files, 1):
-            md_file_path = os.path.join(md_dir, md_file)
-            file_name = md_file.replace('.md', '')
-            
-            print(f"\n📄 [{idx}/{len(md_files)}] Đang xử lý: {md_file}")
-            
-            # Load document
-            with open(md_file_path, 'r', encoding='utf-8') as f:
-                text = f.read()
-            
-            # Tách theo headers
-            section_docs = chunker.section_splitter.split_text(text)
-            print(f"   → {len(section_docs)} sections")
-            
-            # Recursive split cho sections lớn
-            file_chunks = []
-            for section_idx, section_doc in enumerate(section_docs):
-                # Thêm metadata: source file name
-                section_doc.metadata.update({
-                    "source": md_file_path,
-                    "section_id": section_idx,
-                    "document": file_name
-                })
-                
-                # Nếu section quá lớn, tách tiếp
-                if len(section_doc.page_content) > chunker.chunk_size:
-                    sub_chunks = chunker.recursive_splitter.split_documents([section_doc])
-                    
-                    # Thêm sub_chunk_id và giữ source_file metadata
-                    for sub_idx, sub_chunk in enumerate(sub_chunks):
-                        sub_chunk.metadata.update({
-                            "sub_chunk_id": sub_idx,
-                            "total_sub_chunks": len(sub_chunks),
-                        })
-                    file_chunks.extend(sub_chunks)
-                else:
-                    file_chunks.append(section_doc)
-            
-            print(f"   → {len(file_chunks)} chunks")
-            all_chunks.extend(file_chunks)
-        
-        print(f"\n📊 TỔNG KẾT:")
-        print(f"   - Tổng số file: {len(md_files)}")
-        print(f"   - Tổng số chunks: {len(all_chunks)}")
-        
-        # Lưu vào Pinecone
-        print(f"\n💾 Đang lưu vào Pinecone...")
-        
-        os.makedirs(chunks_dir, exist_ok=True)
-        
-        # Import Pinecone components
-        from langchain_pinecone import PineconeVectorStore
-        from pinecone import Pinecone, ServerlessSpec
         import time
         
-        PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "YOUR_PINECONE_API_KEY_HERE")
-        pc = Pinecone(api_key=PINECONE_API_KEY)
+        chunker = HybridSectionChunker(chunk_size=1000, chunk_overlap=150, child_chunk_size=300)
         
-        # Xóa index cũ nếu có
-        existing_indexes = [idx.name for idx in pc.list_indexes()]
+        print(f"\n🔄 Bắt đầu chunking với chiến lược parent-child...")
+        print(f"   👨 Parent threshold: {chunker.chunk_size} chars")
+        print(f"   👶 Child chunk size: {chunker.child_chunk_size} chars")
+        
+        # ============================================================
+        # BƯỚC 1: XÓA TOÀN BỘ DB CŨ (1 LẦN DUY NHẤT)
+        # ============================================================
+        print(f"\n{'='*70}")
+        print(f"🗑️  BƯỚC 1: XÓA TOÀN BỘ DATABASE CŨ")
+        print(f"{'='*70}")
+        
+        # Xóa Pinecone index
+        existing_indexes = [idx.name for idx in chunker.pc.list_indexes()]
         if index_name in existing_indexes:
-            print(f"🗑️  Xóa index cũ: {index_name}")
-            pc.delete_index(index_name)
-            time.sleep(1)
+            print(f"   🗑️  Đang xóa Pinecone index: {index_name}")
+            chunker.pc.delete_index(index_name)
+            print(f"   ✅ Đã xóa Pinecone index")
+            time.sleep(2)  # Đợi Pinecone xóa xong
+        else:
+            print(f"   ℹ️  Không có index cũ cần xóa")
         
-        # Tạo index mới
-        print(f"🔧 Tạo Pinecone index mới: {index_name}")
-        pc.create_index(
-            name=index_name,
-            dimension=768,  # Google text-embedding-004
-            metric='cosine',
-            spec=ServerlessSpec(
-                cloud='aws',
-                region='us-east-1'
+        # Xóa file pickle cũ
+        chunks_file = os.path.join(chunks_dir, f"{index_name.replace('-', '_')}_chunks.pkl")
+        if os.path.exists(chunks_file):
+            os.remove(chunks_file)
+            print(f"   ✅ Đã xóa file pickle: {chunks_file}")
+        else:
+            print(f"   ℹ️  Không có file pickle cũ cần xóa")
+        
+        print(f"\n✅ Đã xóa sạch database cũ!\n")
+        
+        # ============================================================
+        # BƯỚC 2: CHUNKING TẤT CẢ FILE VÀ TẠO DB MỚI
+        # ============================================================
+        print(f"{'='*70}")
+        print(f"🔪 BƯỚC 2: CHUNKING VÀ TẠO DATABASE MỚI")
+        print(f"{'='*70}\n")
+        
+        # Xử lý TẤT CẢ file với reset=False (vì đã xóa sạch ở bước 1)
+        for idx, md_file in enumerate(md_files, 1):
+            md_file_path = os.path.join(md_dir, md_file)
+            print(f"\n{'='*70}")
+            print(f"📄 [{idx}/{len(md_files)}] {md_file}")
+            print(f"{'='*70}")
+            
+            chunker.chunk_and_save_to_db(
+                md_file_path=md_file_path,
+                index_name=index_name,
+                chunks_dir=chunks_dir,
+                reset=False  # KHÔNG reset vì đã xóa sạch ở bước 1 rồi
             )
-        )
         
-        # Đợi index được tạo xong
-        while not pc.describe_index(index_name).status['ready']:
-            time.sleep(1)
-        print(f"✅ Index {index_name} đã sẵn sàng!")
-        
-        PineconeVectorStore.from_documents(
-            documents=all_chunks,
-            embedding=chunker.embeddings,
-            index_name=index_name
-        )
-        
-        # Lưu chunks vào pickle
-        chunks_file_path = os.path.join(chunks_dir, f"{index_name.replace('-', '_')}_chunks.pkl")
-        with open(chunks_file_path, 'wb') as f:
-            pickle.dump(all_chunks, f)
-        print(f"💾 Đã lưu chunks vào {chunks_file_path}")
-        
-        print(f"\n✅ ĐÃ HOÀN THÀNH!")
-        print(f"   📦 Index: {index_name}")
-        print(f"   💾 Chunks lưu tại: {chunks_dir}")
+        print(f"\n{'='*80}")
+        print(f"✅ ĐÃ HOÀN THÀNH TẤT CẢ {len(md_files)} FILE!")
+        print(f"📦 Index: {index_name}")
+        print(f"💾 Chunks lưu tại: {chunks_dir}")
+        print(f"{'='*80}")
         
         return index_name
     except Exception as e:

@@ -1,6 +1,6 @@
-## Tổng quan
+## Giới thiệu
 
-Hồ Chí Minh (chữ Nho: 胡志明; sinh vào ngày 19 tháng 5 năm 1890 – 2 tháng 9 năm 1969), tên khai sinh là Nguyễn Sinh Cung (chữ Nho: 阮生恭), còn được gọi phổ biến tại Việt Nam với tên gọi Bác Hồ, là một nhà cách mạng và chính khách người Việt Nam. Ông là người sáng lập Đảng Cộng sản Việt Nam, từng là Chủ tịch nước Việt Nam Dân chủ Cộng hòa từ 1945–1969, Thủ tướng Việt Nam Dân chủ Cộng hòa trong những năm 1945–1955, Tổng Bí thư Ban Chấp hành Trung ương Đảng Lao động Việt Nam từ 1956–1960, Chủ tịch Ban Chấp hành Trung ương Đảng Lao động Việt Nam từ năm 1951 cho đến khi qua đời.
+Hồ Chí Minh (tên chữ Nho: 胡志明; sinh vào ngày 19 tháng 5 năm 1890 – mất vào ngày 2 tháng 9 năm 1969), tên khai sinh là Nguyễn Sinh Cung (chữ Nho: 阮生恭), còn được gọi phổ biến tại Việt Nam với tên gọi Bác Hồ, là một nhà cách mạng và chính khách người Việt Nam. Ông là người sáng lập Đảng Cộng sản Việt Nam, từng là Chủ tịch nước Việt Nam Dân chủ Cộng hòa từ 1945–1969, Thủ tướng Việt Nam Dân chủ Cộng hòa trong những năm 1945–1955, Tổng Bí thư Ban Chấp hành Trung ương Đảng Lao động Việt Nam từ 1956–1960, Chủ tịch Ban Chấp hành Trung ương Đảng Lao động Việt Nam từ năm 1951 cho đến khi qua đời.
 
 Trong quãng thời gian sinh sống và hoạt động trước khi lên nắm quyền, Hồ Chí Minh đã đi qua nhiều quốc gia và châu lục, ông được cho là đã sử dụng từ 50 đến 200 bí danh khác nhau. Về mặt tư tưởng chính trị, Hồ Chí Minh là một người theo chủ nghĩa Marx–Lenin. Ông là nhà lãnh đạo phong trào độc lập Việt Minh tiến hành Cách mạng Tháng Tám năm 1945. Ông cũng là người đã soạn thảo, đọc bản Tuyên ngôn độc lập thành lập nước Việt Nam Dân chủ Cộng hòa, và trở thành Chủ tịch nước sau cuộc tổng tuyển cử năm 1946.
 
@@ -12,12 +12,9 @@ Trong giai đoạn diễn ra chiến tranh Đông Dương và chiến tranh Vi�
 
 Theo gia phả của dòng họ Nguyễn ở làng Sen, xã Kim Liên, huyện Nam Đàn (nay là xã Kim Liên), tỉnh Nghệ An:
 
-> \*"Hoàng sơ tổ khảo là Thái bảo Nguyễn Bá Phụ, tổ đời thứ 2 là Nguyễn Bá
+> _"Hoàng sơ tổ khảo là Thái bảo Nguyễn Bá Phụ, tổ đời thứ 2 là Nguyễn Bá Bạc, tổ đời thứ 3 là Nguyễn Bá Ban, tổ đời thứ 4 là Nguyễn Văn Dân,... tổ đời thứ 5, Nguyễn Sinh Vật là Giám sinh đời Lê Thánh Đức (tức Lê Thần Tông) năm thứ 3..., tổ đời thứ 6 là Nguyễn Sinh Tài đỗ Hiếu sinh khi 17 tuổi, năm 34 tuổi đỗ Tam trường khoa thi Hội..., tổ đời thứ 10 là Nguyễn Sinh Nhậm."_
 
-    Bạc, tổ đời thứ 3 là Nguyễn Bá Ban, tổ đời thứ 4 là Nguyễn Văn Dân,... tổ đời thứ 5, Nguyễn Sinh Vật là Giám sinh đời Lê Thánh Đức (tức Lê Thần Tông) năm thứ 3..., tổ đời thứ 6 là Nguyễn Sinh Tài đỗ Hiếu sinh khi 17 tuổi, năm 34 tuổi đỗ Tam trường khoa thi Hội..., tổ đời thứ 10 là Nguyễn Sinh Nhậm."*
-
-Theo nhiều tài liệu chính thống cũng như tiểu sử tại Việt Nam, tên lúc nhỏ của Hồ Chí Minh là Nguyễn Sinh Cung (giọng địa phương phát âm là _Côông)_. Tuy nhiên, một số tài liệu ghi nhận tên lúc nhỏ của ông là Nguyễn Sinh Côn. Điều này cũng được chính ông xác nhận bằng chính bút tích của mình trong một bài viết năm 1954. Quê nội ông là làng Kim Liên (tên Nôm là làng Sen). Nguyễn Sinh Cung sinh năm 1890 tại quê ngoại là làng Hoàng Trù (tên Nôm là làng Chùa), nằm cách làng Sen khoảng 2 km) và sống ở đây cho đến năm 1895. Hai làng này vốn cùng nằm trong
-xã Chung Cự, thuộc tổng Lâm Thịnh, huyện Nam Đàn. Quê nội của ông, làng Kim Liên là một làng quê nghèo khó. Phần lớn dân chúng không có ruộng, phải làm thuê cấy rẽ, mặc quần ít, đóng khố nhiều, bởi thế nên làng này còn có tên là làng Đai Khố. Vào đời ông, phần lớn dòng họ của ông đều cơ hàn, kiếm sống bằng nghề làm thuê, và cũng có người tham gia các hoạt động chống Pháp.
+Theo nhiều tài liệu chính thống cũng như tiểu sử tại Việt Nam, tên lúc nhỏ của Hồ Chí Minh là Nguyễn Sinh Cung (giọng địa phương phát âm là _Côông)_. Tuy nhiên, một số tài liệu ghi nhận tên lúc nhỏ của ông là Nguyễn Sinh Côn. Điều này cũng được chính ông xác nhận bằng chính bút tích của mình trong một bài viết năm 1954. Quê nội ông là làng Kim Liên (tên Nôm là làng Sen). Nguyễn Sinh Cung sinh năm 1890 tại quê ngoại là làng Hoàng Trù (tên Nôm là làng Chùa), nằm cách làng Sen khoảng 2 km và sống ở đây cho đến năm 1895. Hai làng này vốn cùng nằm trong xã Chung Cự, thuộc tổng Lâm Thịnh, huyện Nam Đàn. Quê nội của ông, làng Kim Liên là một làng quê nghèo khó. Phần lớn dân chúng không có ruộng, phải làm thuê cấy rẽ, mặc quần ít, đóng khố nhiều, bởi thế nên làng này còn có tên là làng Đai Khố. Vào đời ông, phần lớn dòng họ của ông đều cơ hàn, kiếm sống bằng nghề làm thuê, và cũng có người tham gia các hoạt động chống Pháp.
 
 Cha của Nguyễn Sinh Cung là một nhà Nho tên là Nguyễn Sinh Sắc (1862–1929), từng đỗ Phó bảng. Mẹ ông là bà Hoàng Thị Loan (1868–1901). Nguyễn Sinh Cung có một người chị là Nguyễn Thị Thanh (sinh năm 1884), một người anh là Nguyễn Sinh Khiêm (sinh năm 1888, tự Tất Đạt, còn gọi là Cả Khiêm) và một người em trai mất sớm là Nguyễn Sinh Nhuận (1900–1901, tên khi mới lọt lòng là Xin).
 
@@ -27,8 +24,7 @@ Năm 1895, Nguyễn Sinh Cung cùng cha mẹ và anh trai vào Huế lần đầ
 
 Năm 1906, Nguyễn Sinh Cung theo cha vào Huế lần thứ hai và học ở Trường Tiểu học Pháp-Việt Đông Ba. Tại đây, ông trải qua các niên khóa 1906–1907 lớp nhì và 1907–1908 lớp nhất. Trong kỳ thi _primaire_ (tương đương tốt nghiệp tiểu học) năm 1908 – ông là một trong 10 học trò giỏi nhất của trường Pháp – Việt Đông Ba được thi vượt cấp vào hệ Thành chung trường Quốc Học.
 
-Theo nghiên cứu của học giả William J. Duiker, vào tháng 9 năm 1907, Nguyễn Sinh Cung vào học lớp trung học đệ nhị niên tại trường Quốc học Huế, nhưng bị đuổi học vào cuối tháng 5 năm 1908 vì tham gia phong trào chống thuế ở Trung Kỳ. Cha ông bị triều đình khiển trách vì "hành vi của hai con trai". Hai anh em Tất Đạt và Tất Thành bị giám sát chặt chẽ. Ông quyết định vào miền Nam để tránh sự kiểm soát của triều đình. Tuy nhiên, theo tài liệu hiện lưu trữ tại Trung tâm Lưu trữ Hải ngoại (_Centre des archives d'Outre-mer_ hay _CAOM_) ở Pháp, Nguyễn Sinh Cung được nhận vào Quốc học Huế vào ngày 7 tháng 8 năm 1908.
-Theo nhà nghiên cứu lịch sử Vũ Ngự Chiêu thì như vậy "không có việc Nguyễn Sinh Cung bị trục xuất khỏi trường Quốc học vì tham gia vào cuộc biểu tình chống sưu thuế ở Huế — cuộc biểu tình chống sưu dịch xảy ra ngày 9 tới 12 tháng 4 năm 1908; tức gần 4 tháng trước ngày trò Cung được nhận vào trường Quốc học".
+Theo nghiên cứu của học giả William J. Duiker, vào tháng 9 năm 1907, Nguyễn Sinh Cung vào học lớp trung học đệ nhị niên tại trường Quốc học Huế, nhưng bị đuổi học vào cuối tháng 5 năm 1908 vì tham gia phong trào chống thuế ở Trung Kỳ. Cha ông bị triều đình khiển trách vì "hành vi của hai con trai". Hai anh em Tất Đạt và Tất Thành bị giám sát chặt chẽ. Ông quyết định vào miền Nam để tránh sự kiểm soát của triều đình. Tuy nhiên, theo tài liệu hiện lưu trữ tại Trung tâm Lưu trữ Hải ngoại (_Centre des archives d'Outre-mer_ hay _CAOM_) ở Pháp, Nguyễn Sinh Cung được nhận vào Quốc học Huế vào ngày 7 tháng 8 năm 1908. Theo nhà nghiên cứu lịch sử Vũ Ngự Chiêu thì như vậy "không có việc Nguyễn Sinh Cung bị trục xuất khỏi trường Quốc học vì tham gia vào cuộc biểu tình chống sưu thuế ở Huế — cuộc biểu tình chống sưu dịch xảy ra ngày 9 tới 12 tháng 4 năm 1908; tức gần 4 tháng trước ngày trò Cung được nhận vào trường Quốc học".
 
 Đầu năm 1910, Nguyễn Tất Thành đến Phan Thiết. Ông dạy thể dục và chữ Quốc ngữ cho học sinh lớp ba và tư tại trường Dục Thanh của Hội Liên Thành.
 
@@ -44,20 +40,16 @@ Khoảng trước tháng 2 năm 1911, ông nghỉ dạy và vào Sài Gòn cũng
 
 #### Thời kỳ 1911-1919
 
-- Mô hình chiếc tàu buôn _Đô đốc Latouche-Tréville_ được trưng bày
-  tại bến Nhà Rồng
+- Mô hình chiếc tàu buôn _Đô đốc Latouche-Tréville_ được trưng bày tại bến Nhà Rồng
 - Thư Nguyễn Tất Thành xin được nhập học vào Trường École Coloniale
-- Nguyễn Ái Quốc, đại biểu
-  Đông Dương, chụp tại Đại hội Đảng Cộng sản Pháp họp tại Marseille năm 1921
+- Nguyễn Ái Quốc, đại biểu Đông Dương, chụp tại Đại hội Đảng Cộng sản Pháp họp tại Marseille năm 1921
 
 Ngày 5 tháng 6 năm 1911, từ Bến Nhà Rồng, Nguyễn Tất Thành lấy tên Văn Ba lên đường sang Pháp với nghề phụ bếp trên chiếc tàu buôn _Đô đốc Latouche-Tréville_, với mong muốn học hỏi những tinh hoa và tiến bộ từ các nước phương Tây. Ngày 6 tháng 7 năm 1911, sau hơn 1 tháng đi biển, tàu cập cảng Marseille, Pháp. Tại Marseilles, ông đã viết thư đến Tổng thống Pháp, xin được nhập học vào Trường Thuộc địa (_École Coloniale_), trường chuyên đào tạo các nhân viên hành chánh cho chính quyền thực dân, với hy vọng _"giúp ích cho Pháp"_. Thư yêu cầu của ông bị từ chối và được chuyển đến Khâm sứ Trung Kỳ ở Huế. Ở Pháp một thời gian, sau đó Nguyễn Tất Thành qua Hoa Kỳ. Sau khi ở Hoa Kỳ một năm (cuối 1912-cuối 1913), ông đến nước Anh làm nghề cào tuyết, đốt lò rồi phụ bếp cho khách sạn, học tiếng Anh, và ở Luân Đôn cho đến cuối năm 1916. Một số tài liệu trong kho lưu trữ của Pháp và Nga cho biết trong thời gian sống tại Hoa Kỳ, Nguyễn Tất Thành đã đến nghe Marcus Garvey diễn thuyết ở khu Harlem và tham khảo ý kiến của các nhà hoạt động vì nền độc lập của Triều Tiên. Cuối năm 1917, ông trở lại nước Pháp, sống và hoạt động ở đây cho đến năm 1923.
 
 #### Thời kỳ ở Pháp
 
-- Tấm biển đồng gắn tại nhà số 9 ngõ Compoint, quận 17
-  Paris: _"Tại đây, từ năm 1921-1923, Nguyễn Ái Quốc đã sống và chiến đấu vì quyền độc lập và tự do cho nhân dân Việt Nam và các dân tộc bị áp bức"_.
-- Tranh biếm họa của Nguyễn Ái Quốc cho tờ
-  _Le Paria_, đời sống người dân dưới ách thống trị của thực dân Pháp
+- Tấm biển đồng gắn tại nhà số 9 ngõ Compoint, quận 17 Paris: _"Tại đây, từ năm 1921-1923, Nguyễn Ái Quốc đã sống và chiến đấu vì quyền độc lập và tự do cho nhân dân Việt Nam và các dân tộc bị áp bức"_.
+- Tranh biếm họa của Nguyễn Ái Quốc cho tờ _Le Paria_, đời sống người dân dưới ách thống trị của thực dân Pháp
 
 Tháng 2 năm 1919, Nguyễn Tất Thành gia nhập Đảng Xã hội Pháp. Ngày 18 tháng 6 năm 1919, thay mặt _Hội những người An Nam yêu nước_, Nguyễn Tất Thành đã mang tới Hội nghị Hòa bình Versailles bản Yêu sách của nhân dân An Nam gồm 8 điểm để kêu gọi lãnh đạo các nước Đồng Minh áp dụng các lý tưởng của Tổng thống Mỹ Wilson cho các lãnh thổ thuộc địa của Pháp ở Đông Nam Á, trao tận tay Tổng thống Pháp và các đoàn đại biểu đến dự hội nghị. Bản yêu sách không yêu cầu độc lập cho Việt Nam, nhưng bao gồm quyền tự do và bình đẳng. Bản yêu sách này do một nhóm các nhà ái quốc Việt Nam sống ở Pháp, trong đó có Phan Châu Trinh, Phan Văn Trường và Nguyễn Tất Thành, cùng viết, và được ký tên chung là Nguyễn Ái Quốc. Từ đây, Nguyễn Tất Thành công khai gọi tên mình là Nguyễn Ái Quốc và sử dụng tên này trong suốt 30 năm sau đó.
 
@@ -93,10 +85,8 @@ Cùng năm 1925, Nguyễn Ái Quốc tham gia thành lập Hội Liên hiệp c�
 
 #### Thời kỳ ở Thái Lan (1928–1929)
 
-- Nhà lưu niệm Chủ tịch Hồ Chí Minh ở Ban Nachok,
-  Nakhon Phanom, Thái Lan, 2010.
-- Căn nhà ở Ban Nachok,
-  Nakhon Phanom, Thái Lan, nơi Hồ Chí Minh từng ở.
+- Nhà lưu niệm Chủ tịch Hồ Chí Minh ở Ban Nachok, Nakhon Phanom, Thái Lan, 2010.
+- Căn nhà ở Ban Nachok, Nakhon Phanom, Thái Lan, nơi Hồ Chí Minh từng ở.
 
 Mùa thu 1928, Nguyễn Ái Quốc từ châu Âu đến Xiêm La (Thái Lan), cải trang là một nhà sư đầu trọc, với bí danh Thầu Chín để tuyên truyền và huấn luyện cho Việt kiều tại Xiêm, đồng thời xuất bản báo gửi về nước. Cuối năm 1929, ông rời khỏi Vương quốc Xiêm La và sang Trung Quốc.
 
@@ -190,9 +180,7 @@ Ngày 6 tháng 1 năm 1946, Tổng tuyển cử tự do trong cả nước đư�
 
 Quốc hội khóa I của Việt Nam đã cử ra Chính phủ Liên hiệp Kháng chiến do Hồ Chí Minh làm Chủ tịch (Hồ Chí Minh đạt số phiếu cao nhất với 169.222 lá phiếu, chiếm 98,4%). Đại biểu quốc hội chủ yếu là nhân sĩ trí thức, người ngoài Đảng. Hồ Chí Minh trở thành Chủ tịch Nước Việt Nam Dân chủ Cộng hòa, và với chức danh Chủ tịch Chính phủ Việt Nam Dân chủ Cộng hòa, ông cũng đảm nhiệm luôn công việc của thủ tướng. Chính phủ này, cho tới cuối năm 1946, đã trải qua 3 lần thay đổi cơ cấu và nhân sự vào các thời điểm: ngày 1 tháng 1; tháng 3; và ngày 3 tháng 11.
 
-Nhà nước và chính phủ của Hồ Chí Minh đối mặt với hàng loạt khó khăn cả về đối nội và đối ngoại. Về đối ngoại, lúc này Việt Nam chưa được bất cứ quốc gia nào công nhận, không phải thành viên Liên Hợp Quốc, cũng như không nhận được sự ủng hộ nào về vật chất của các nước khác. Ngoài
-200.000 quân
-Trung Hoa Dân quốc ở miền Bắc, còn có quân Anh, quân Pháp (vào thời điểm toàn quốc kháng chiến, tháng 12 năm 1946, Pháp có khoảng 60.000 quân) và khoảng 60.000 quân Nhật. Về đối nội, _"giặc đói, giặc dốt"_ – như chính cách ông gọi – và ngân quỹ trống rỗng là những vấn đề hệ trọng nhất.
+Nhà nước và chính phủ của Hồ Chí Minh đối mặt với hàng loạt khó khăn cả về đối nội và đối ngoại. Về đối ngoại, lúc này Việt Nam chưa được bất cứ quốc gia nào công nhận, không phải thành viên Liên Hợp Quốc, cũng như không nhận được sự ủng hộ nào về vật chất của các nước khác. Ngoài 200.000 quân Trung Hoa Dân quốc ở miền Bắc, còn có quân Anh, quân Pháp (vào thời điểm toàn quốc kháng chiến, tháng 12 năm 1946, Pháp có khoảng 60.000 quân) và khoảng 60.000 quân Nhật. Về đối nội, _"giặc đói, giặc dốt"_ – như chính cách ông gọi – và ngân quỹ trống rỗng là những vấn đề hệ trọng nhất.
 
 Bởi thế, Hồ Chí Minh chú trọng đến việc phát triển giáo dục, mà trước hết là xóa nạn mù chữ bằng cách mở các lớp học Bình dân học vụ. Tháng 9 năm 1945, nhân ngày khai trường, Hồ Chí Minh đã viết thư gửi cho học trò Việt Nam. Thư có đoạn:
 
@@ -210,9 +198,7 @@ Tháng 10 năm 1945, khi Hà Ứng Khâm, Tổng Tham mưu trưởng của quân
 
 Với tư tưởng đặt lợi ích quốc gia lên hàng đầu, Hồ Chí Minh kêu gọi và thực hiện triệt để chính sách đại đoàn kết dân tộc bằng cách mời nhiều nhân sĩ, trí thức tham gia các Chính phủ và Quốc hội. Trước Quốc hội, ông tuyên bố: "Tôi chỉ có một Đảng – đảng Việt Nam". Trong số những nhân sĩ, trí thức do ông mời được lựa chọn vào các vị trí trong Chính phủ, có khá nhiều người vốn không tham gia Việt Minh. Đó là các bộ trưởng: Huỳnh Thúc Kháng, Nguyễn Văn Huyên, Trần Đăng Khoa, Hoàng Tích Trí, Vũ Đình Hòe, Chu Bá Phượng, Nguyễn Văn Tố và Bồ Xuân Luật. Năm 1947, Chính phủ được cải tổ với sự tham gia thêm của một số trí thức khác, như Phan Anh, Hoàng Minh Giám. Về sau này ông cho biết:
 
-> \*"Khi tổ chức Chính phủ lâm thời, có những đồng chí trong Ủy ban Trung
-
-    ương do Quốc dân Đại hội bầu ra, đáng lẽ tham gia Chính phủ, song các đồng chí ấy đã tự động xin lui, để nhường chỗ cho những nhân sĩ yêu nước nhưng ở ngoài Việt Minh. Đó là một cử chỉ vô tư, tốt đẹp, không ham chuộng địa vị, đặt lợi ích của dân tộc, của đoàn kết nhân dân lên trên lợi ích cá nhân. Đó là một cử chỉ đáng khen, đáng kính mà chúng ta phải học"*.
+> _"Khi tổ chức Chính phủ lâm thời, có những đồng chí trong Ủy ban Trung ương do Quốc dân Đại hội bầu ra, đáng lẽ tham gia Chính phủ, song các đồng chí ấy đã tự động xin lui, để nhường chỗ cho những nhân sĩ yêu nước nhưng ở ngoài Việt Minh. Đó là một cử chỉ vô tư, tốt đẹp, không ham chuộng địa vị, đặt lợi ích của dân tộc, của đoàn kết nhân dân lên trên lợi ích cá nhân. Đó là một cử chỉ đáng khen, đáng kính mà chúng ta phải học"_.
 
 Hồ Chí Minh xem những đảng phái quốc gia thân Trung Hoa Dân quốc như Việt Cách, Việt Quốc là bọn quốc gia giả hiệu, đầy tớ của Trung Hoa Quốc dân Đảng và không có liên hệ gì với nhân dân Việt Nam. Ông miêu tả họ là những người không có tổ chức, một nhóm cơ hội tranh giành nhau, tàn dư của các đảng phái quốc gia cũ không có chương trình hành động cơ bản nhưng lại có quá nhiều lãnh đạo. Nhưng ông chấp nhận sự hiện diện của Việt Cách, Việt Quốc trong các chính phủ liên tục được thay đổi, chấp nhận 70 ghế cho Việt Quốc, Việt Cách trong Quốc hội không cần qua bầu cử. Tuy nhiên chức trách các Bộ cũng thay đổi. Bộ trưởng Quốc phòng trở thành người lo về tài chính mà không được xem xét danh sách nhân sự, quân số, súng đạn còn các Bộ trưởng khác của các đảng phái Quốc gia chẳng có chức trách cụ thể gì, không bao giờ được tham dự bất cứ buổi họp nào của Nội các. Hồ Chí Minh cũng giao cho Võ Nguyên Giáp và Trần Quốc Hoàn, sau này trở thành Bộ trưởng Công an, nhiệm vụ vô hiệu hóa các cuộc biểu tình do Việt Nam Quốc dân Đảng và Việt Nam Cách mệnh Đồng minh Hội tổ chức nhằm chấm dứt hoạt động tuyên truyền của các đảng phái này trong dân chúng.
 
@@ -220,15 +206,10 @@ Khi biết Ngô Đình Diệm bị du kích Việt Minh bắt tại Tuy Hòa, Ph
 
 [Hình ảnh: Hồ Chí Minh vàPhạm Văn ĐồngtạiParis,1946.]
 
-Theo Hiệp ước Pháp-Hoa, ký ngày 28 tháng 2 năm 1946, quân Pháp thay thế quân của Tưởng Giới Thạch. Một tuần sau, ngày 6 tháng 3 năm 1946, Hồ Chí Minh cùng Vũ Hồng Khanh ký với Jean Sainteny – Ủy viên Pháp ở miền bắc Đông Dương
+Theo Hiệp ước Pháp-Hoa, ký ngày 28 tháng 2 năm 1946, quân Pháp thay thế quân của Tưởng Giới Thạch. Một tuần sau, ngày 6 tháng 3 năm 1946, Hồ Chí Minh cùng Vũ Hồng Khanh ký với Jean Sainteny – Ủy viên Pháp ở miền bắc Đông Dương - bản Hiệp định Sơ bộ với Pháp, với 3 nội dung chủ chốt:
 
-- bản
-  Hiệp định Sơ bộ với Pháp, với 3 nội dung chủ chốt:
-
-- Pháp công nhận
-  Việt Nam "là một nước tự do, là một phần tử trong Liên bang Đông Dương thuộc Liên hiệp Pháp". Trước đó, đàm phán căng thẳng khi ông muốn Việt Nam được công nhận là quốc gia độc lập và phản đối kịch liệt khi Pháp muốn dùng chữ "Quốc gia Tự trị" để mô tả Tổ quốc của ông.
-- Pháp được đưa 15.000 quân ra Bắc thế cho quân Tưởng, nhưng phải rút trong
-  5 năm, mỗi năm rút 1/5 quân số.
+- Pháp công nhận Việt Nam "là một nước tự do, là một phần tử trong Liên bang Đông Dương thuộc Liên hiệp Pháp". Trước đó, đàm phán căng thẳng khi ông muốn Việt Nam được công nhận là quốc gia độc lập và phản đối kịch liệt khi Pháp muốn dùng chữ "Quốc gia Tự trị" để mô tả Tổ quốc của ông.
+- Pháp được đưa 15.000 quân ra Bắc thế cho quân Tưởng, nhưng phải rút trong 5 năm, mỗi năm rút 1/5 quân số.
 - Ngừng xung đột, giữ nguyên quân đội tại vị trí cũ.
 
 [Hình ảnh: Chủ tịch Hồ Chí Minh cùng với các ôngDương Bạch Mai(đội mũ phớt),Phạm Văn Đồng,Trần Ngọc Danh,Vũ Đình Huỳnh(đội mũ ca lô) tại khu rừng Boulogne trong thời gian ở Pháp, ngày 23/6/1946.]
@@ -249,14 +230,9 @@ Tháng 3 năm 1947, Hồ Chí Minh và Trung ương Đảng chuyển lên Việt
 
 Từ năm 1947 cho tới năm 1950, Hồ Chí Minh lãnh đạo cuộc kháng chiến, khiến quân Pháp dần bị sa lầy và ngày càng mệt mỏi vì chiến tranh. Hồ Chí Minh đã nói về cuộc chiến này:
 
-> \*"Nó sẽ là một cuộc chiến giữa
+> _"Nó sẽ là một cuộc chiến giữa voi và hổ. Nếu hổ đứng yên thì sẽ bị voi dẫm chết. Nhưng hổ không đứng yên. Ban ngày nó ẩn nấp trong rừng và ra ngoài vào ban đêm. Nó sẽ nhảy lên lưng voi, xé những mảnh da lớn, và rồi nó sẽ chạy trở lại vào rừng tối. Và dần dần, con voi sẽ chảy máu đến chết. Cuộc chiến tranh ở Đông Dương sẽ như vậy"._
 
-    voi và hổ. Nếu hổ đứng yên thì sẽ bị voi dẫm chết. Nhưng hổ không đứng yên. Ban ngày nó ẩn nấp trong rừng và ra ngoài vào ban đêm. Nó sẽ nhảy lên lưng voi, xé những mảnh da lớn, và rồi nó sẽ chạy trở lại vào rừng tối. Và dần dần, con voi sẽ chảy máu đến chết. Cuộc chiến tranh ở Đông Dương sẽ như vậy".*
-
-Chuyến đi của Hồ Chí Minh sang Trung Quốc và Liên Xô gặp Stalin và Mao Trạch Đông năm 1950 có ý nghĩa đặc biệt, nhất là trong vấn đề Trung Quốc và Liên Xô hỗ trợ chính phủ Bắc Việt Nam phát triển chủ nghĩa cộng sản ở Việt Nam và chống Pháp. Đúng dịp Tết Nguyên đán Canh Dần năm 1950, ông thực hiện một chuyến đi bí mật sang Trung Quốc, Liên Xô. Ngày 2 tháng 1 năm 1950, ông cùng Trần Đăng Ninh, từ Tuyên Quang đi bộ tới Trùng Khánh
-
-- Cao Bằng, rồi đi
-  tiếp đến Long Châu, Quảng Tây. Đến đây, Hồ Chí Minh bắt được liên lạc với Đảng Cộng sản Trung Quốc. Văn phòng Trung ương Đảng Cộng sản Trung Quốc đã bố trí xe đón đoàn đi Nam Ninh, từ đó đoàn đi xe lửa đến Bắc Kinh. Ông làm việc ở Bắc Kinh một tuần, sau đó cùng Trần Đăng Ninh đi xe lửa liên vận đến Liên Xô. Chuyến đi bí mật này, ông đã thành công ở cả hai phương diện chính trị và ngoại giao, đó là chuyến đi lịch sử làm tiền đề cho việc thiết lập quan hệ ngoại giao giữa Việt Nam – Liên Xô, giữa Việt Nam – Trung Quốc và các nước xã hội chủ nghĩa khác. Ngày 11 tháng 3 năm 1950, Hồ Chí Minh và Trần Đăng Ninh về đến Bắc Kinh, giữa tháng 4 năm 1950, ông mới về đến Tuyên Quang.
+Chuyến đi của Hồ Chí Minh sang Trung Quốc và Liên Xô gặp Stalin và Mao Trạch Đông năm 1950 có ý nghĩa đặc biệt, nhất là trong vấn đề Trung Quốc và Liên Xô hỗ trợ chính phủ Bắc Việt Nam phát triển chủ nghĩa cộng sản ở Việt Nam và chống Pháp. Đúng dịp Tết Nguyên đán Canh Dần năm 1950, ông thực hiện một chuyến đi bí mật sang Trung Quốc, Liên Xô. Ngày 2 tháng 1 năm 1950, ông cùng Trần Đăng Ninh, từ Tuyên Quang đi bộ tới Trùng Khánh - Cao Bằng, rồi đi tiếp đến Long Châu, Quảng Tây. Đến đây, Hồ Chí Minh bắt được liên lạc với Đảng Cộng sản Trung Quốc. Văn phòng Trung ương Đảng Cộng sản Trung Quốc đã bố trí xe đón đoàn đi Nam Ninh, từ đó đoàn đi xe lửa đến Bắc Kinh. Ông làm việc ở Bắc Kinh một tuần, sau đó cùng Trần Đăng Ninh đi xe lửa liên vận đến Liên Xô. Chuyến đi bí mật này, ông đã thành công ở cả hai phương diện chính trị và ngoại giao, đó là chuyến đi lịch sử làm tiền đề cho việc thiết lập quan hệ ngoại giao giữa Việt Nam – Liên Xô, giữa Việt Nam – Trung Quốc và các nước xã hội chủ nghĩa khác. Ngày 11 tháng 3 năm 1950, Hồ Chí Minh và Trần Đăng Ninh về đến Bắc Kinh, giữa tháng 4 năm 1950, ông mới về đến Tuyên Quang.
 
 Tại Đại hội Đảng toàn quốc lần thứ 2 được tổ chức vào trung tuần tháng 2 năm 1951 tại Tuyên Quang, Hồ Chí Minh quyết định đưa Đảng ra hoạt động công khai trở lại. Tuy nhiên, khi này tên gọi không còn là Đảng Cộng sản nữa mà có tên mới là Đảng Lao động Việt Nam. Ông tuyên bố:
 
@@ -272,8 +248,7 @@ Chiến tranh Đông Dương kết thúc vào năm 1954, khi thực dân Pháp b
 
 #### Giai đoạn sau năm 1954
 
-[Hình ảnh: Hồ Chí Minh và Chủ tịchCộng hòa Dân chủ ĐứcWilhelm Pieck,
-1957.]
+[Hình ảnh: Hồ Chí Minh và Chủ tịchCộng hòa Dân chủ ĐứcWilhelm Pieck, 1957.]
 
 Ngày 8 tháng 7 năm 1957, Hồ Chí Minh ghé thăm Bắc Kinh trên đường đi Bắc Hàn, Liên Xô và Đông Âu khi chiến dịch chống phái hữu ở Trung Quốc bắt đầu. Tháng 8 năm 1957, một năm sau cuộc nổi dậy năm 1956 tại Hungary, Hồ Chí Minh dẫn đầu Đoàn Đại biểu cấp cao Việt Nam Dân chủ Cộng hòa bỏ ra năm ngày thực hiện cuộc viếng thăm hữu nghị Cộng hòa Nhân dân Hungary. Trên đường quay về Việt Nam vào cuối tháng 8 năm 1957, Hồ Chí Minh một lần nữa ghé thăm Trung Quốc và gặp các lãnh đạo Trung Quốc lúc ấy đang bận rộn với chiến dịch chống phái hữu. Theo Trình Ánh Hồng (một nhà nghiên cứu Trung Quốc), có lẽ ông đã bị ấn tượng mạnh về phong trào Trăm hoa đua nở, trăm nhà đua tiếng và ý định thực hiện giống như chiến lược của Mao Trạch Đông nhằm buộc những người có quan điểm trái ngược với Đảng Cộng sản Trung Quốc lộ mình. Đối với Việt Nam Dân chủ Cộng hòa, tình hình quốc tế cuối năm 1957 và đầu 1958 đã chuyển biến rất khác giai đoạn trước đó. Khoảng hai tuần sau khi trở về nước, Hồ Chí Minh dùng bút danh _Trần Lực_, đăng một bài trên báo Nhân dân ngày 16 tháng 9 năm.1957 với tựa đề _"Đập tan tư tưởng hữu khuynh"_, lên án đó là tư tưởng độc hại và dễ lan tràn như cỏ dại, sau đó Phong trào Nhân Văn - Giai Phẩm bị dập tắt. Trước đó, một xã luận của báo Nhân dân ở Việt Nam, viết rằng: "Chúng ta không thể cho phép bất kỳ ai lợi dụng tự do dân chủ và tự do ngôn luận để tách rời nhân dân khỏi Đảng."
 
@@ -283,12 +258,7 @@ Hai năm sau (1959), Hồ Chí Minh tới thăm thủ đô Bắc Kinh nhân dị
 
 Đầu tháng 9 năm 1963, Hồ Chí Minh lần đầu đi điều dưỡng trị liệu ở suối nước nóng Tùng Hóa, tỉnh Quảng Đông, Trung Quốc. Chu Ân Lai và Trần Nghị từ Bắc Kinh đến thăm ông, sắp xếp việc sinh hoạt hàng ngày và chăm sóc sức khoẻ cho Hồ Chí Minh. Ảnh chân dung thường thấy hiện nay của Hồ Chí Minh được treo ở các nơi quan trọng của Việt Nam là do nhiếp ảnh gia Lục Văn Tuấn (陸文駿) của "Quảng Đông họa báo" (廣東畫報) chụp trong thời gian ông điều dưỡng trị liệu ở suối nước nóng Tòng Hóa.
 
-Ít lâu sau khi Hoa Kỳ bắt đầu cuộc chiến tranh không kích, ném bom vào miền Bắc Việt Nam, Hồ Chí Minh nhận được điện từ nhà triết học nổi tiếng người Anh Bertrand Russell
-
-- một người yêu hòa bình. Trong điện này, Russell nêu ra quan điểm chống đối
-  của mình đối với sự can thiệp của quân đội Hoa Kỳ trong chiến tranh Việt Nam. Đáp lại, ông gửi Russell điện cảm ơn vào ngày 10 tháng 8 năm
-
-1964. Điện này có đoạn:
+Ít lâu sau khi Hoa Kỳ bắt đầu cuộc chiến tranh không kích, ném bom vào miền Bắc Việt Nam, Hồ Chí Minh nhận được điện từ nhà triết học nổi tiếng người Anh Bertrand Russell - một người yêu hòa bình. Trong điện này, Russell nêu ra quan điểm chống đối của mình đối với sự can thiệp của quân đội Hoa Kỳ trong chiến tranh Việt Nam. Đáp lại, ông gửi Russell điện cảm ơn vào ngày 10 tháng 8 năm 1964. Điện này có đoạn:
 
 “ Chúng tôi luôn thiết tha với hòa bình và chủ trương giải quyết vấn đề Việt Nam bằng phương pháp hòa bình. Tôi cảm ơn cụ đã quan tâm đến tình hình nghiêm trọng do Mỹ gây ra trên đất nước chúng tôi và xin gửi cụ lời chào kính trọng. ”
 
@@ -332,8 +302,7 @@ Hồ Chí Minh qua đời vào hồi 9 giờ 47 phút sáng ngày 2 tháng 9 nă
 
 Hà Nội đã nhận được hơn 22.000 bức điện chia buồn từ 121 nước trên khắp thế giới. Nhiều nước trong khối xã hội chủ nghĩa đã tự tổ chức truy điệu và đưa ra những lời ca ngợi ông. Một tuyên bố chính thức từ Moskva đã gọi Hồ Chí Minh là một "người con vĩ đại của dân tộc Việt Nam anh hùng, nhà lãnh đạo xuất chúng của phong trào Cộng sản quốc tế và phong trào giải phóng dân tộc, và một người bạn lớn của Liên bang Xô Viết". Từ các nước Thế giới thứ ba, người ta ca ngợi ông trong vai trò của người bảo vệ những con người bị áp bức. Một bài báo xuất bản ở Ấn Độ miêu tả ông là sự kết tinh của "nhân dân và hiện thân của khát vọng đấu tranh cho tự do và cho sự đấu tranh bền bỉ của nhân dân". Những bài báo khác đề cao phong cách giản dị và đạo đức cao của ông. Một bài xã luận trên một tờ báo của Uruguay viết:
 
-> “ *Ông có một trái tim bao la như vũ trụ và tình yêu trẻ thơ vô bờ bến.
-> Ông là hình mẫu của sự giản dị trong mọi mặt.* ”
+> “ *Ông có một trái tim bao la như vũ trụ và tình yêu trẻ thơ vô bờ bến. Ông là hình mẫu của sự giản dị trong mọi mặt.* ”
 
 Phản ứng từ các nước phương Tây dè dặt hơn. Nhà Trắng và các quan chức cấp cao của Hoa Kỳ từ chối bình luận. Báo chí phương Tây đặt sự chú ý cao đối với cái chết của Hồ Chí Minh. Các tờ báo ủng hộ phong trào phản chiến có xu hướng miêu tả ông như là một đối thủ xứng đáng và là người bảo vệ cho những con người bị áp bức. Ngay cả những tờ báo đã từng phản đối mạnh mẽ chính quyền Hà Nội cũng ghi nhận Hồ Chí Minh là người đã cống hiến cả cuộc đời cho công cuộc kiếm tìm độc lập và thống nhất đất nước Việt Nam của ông, đồng thời là tiếng nói nổi bật trong việc bảo vệ những dân tộc bị áp bức trên toàn thế giới.
 
@@ -347,9 +316,7 @@ Quốc tang tại Việt Nam Dân chủ cộng hòa tổ chức trong 7 ngày t�
 
 Trong di chúc, ông muốn được hỏa táng và đặt tro tại ba miền đất nước. Tuy nhiên, theo nguyện vọng của Đảng Lao động, Nhà nước và nhân dân Việt Nam, Bộ Chính trị Ban Chấp hành Trung ương Đảng khóa III quyết định giữ gìn lâu dài thi hài Hồ Chí Minh để sau này nhân dân cả nước, nhất là nhân dân miền Nam, khách quốc tế có thể tới viếng ông. Theo lời kể của con trai cả của Bí thư Lê Duẩn, Lê Duẩn đã nói với Hồ Chí Minh về việc thi hài ông nên được bảo quản lâu dài để đồng bào trong Nam và cả nước được đến thăm, nghe vậy Hồ Chí Minh trở nên trầm ngâm. Tổng Bí thư Lê Duẩn từng nói với Chủ tịch Hội đồng Bộ trưởng Liên Xô:
 
-> \*Các đồng chí biết Bác Hồ của chúng tôi đối với dân tộc
-
-    Việt Nam là thiêng liêng như thế nào. Nhất là đối với đồng bào miền Nam, họ hy sinh chiến đấu để được độc lập, thống nhất và cũng là để được gặp Bác cho toại nguyện. Bác cũng rất muốn vào Nam gặp đồng bào Miền Nam, nhưng sức khỏe của Bác không cho phép. Vì vậy chúng tôi phải giữ thi thể của Bác để đồng bào Miền Nam chúng tôi được thấy dung nhan của Bác sau ngày chiến thắng.*
+> _Các đồng chí biết Bác Hồ của chúng tôi đối với dân tộc Việt Nam là thiêng liêng như thế nào. Nhất là đối với đồng bào miền Nam, họ hy sinh chiến đấu để được độc lập, thống nhất và cũng là để được gặp Bác cho toại nguyện. Bác cũng rất muốn vào Nam gặp đồng bào Miền Nam, nhưng sức khỏe của Bác không cho phép. Vì vậy chúng tôi phải giữ thi thể của Bác để đồng bào Miền Nam chúng tôi được thấy dung nhan của Bác sau ngày chiến thắng._
 
 Từ đó đến nay, thi hài ông được bảo quản trong lăng tại Hà Nội, tương tự như đối với thi hài Lenin ở Moskva.
 
@@ -365,8 +332,7 @@ Cho tới nay, vẫn chưa có tài liệu nào từ phía Nhà nước Việt N
 
 Về vấn đề Tăng Tuyết Minh, nhà nghiên cứu Sophie Quinn-Judge có ý kiến dè dặt hơn vì vào thời kỳ đó, đôi khi một cuộc hôn nhân diễn ra chỉ đơn thuần là tạo vỏ bọc cho những lý do chính trị; theo đó Hồ Chí Minh và Tăng Tuyết Minh đã sống chung với nhau như là cách ngụy trang để duy trì các hoạt động chính trị của họ.
 
-Cũng theo Sophie Quinn-Judge, nếu căn cứ theo các tài liệu từ văn khố của Đệ Tam Quốc tế từ năm 1934 đến 1935, Nguyễn Thị Minh Khai từng nhận mình là vợ của Hồ Chí Minh vào thời điểm năm 1931. Khi Nguyễn Thị Minh Khai đến
-Moskva cuối năm 1934, bà đã viết rằng bà đã có gia đình với "Lin", bí danh của Hồ Chí Minh vào thời điểm này. Tuy nhiên, trong một cuộc phỏng vấn với Ban Tiếng Việt BBC, Sophie Quinn-Judge cũng nói thêm rằng mình _"không biết chắc liệu đây có thuộc về dạng hôn nhân thật sự hay không"_, vì trong các thư từ của họ thường sử dụng nhiều loại mật mã, và nói chung những người hoạt động cách mạng có thể xem là "thuộc về một thế giới khác, vượt khỏi các khuôn khổ đạo đức bình thường" nên khó mà biết rõ đời tư của họ. Ngoài ra, Sophie Quinn-Judge cũng tìm ra một bức thư mà Nguyễn Thị Minh Khai viết vào năm 1933, trong đó Nguyễn Thị Minh Khai khẳng định rằng mình không hề bị vướng bận bởi chuyện chồng con, vì "người chồng" duy nhất của bà chính là sự nghiệp Cách mạng.
+Cũng theo Sophie Quinn-Judge, nếu căn cứ theo các tài liệu từ văn khố của Đệ Tam Quốc tế từ năm 1934 đến 1935, Nguyễn Thị Minh Khai từng nhận mình là vợ của Hồ Chí Minh vào thời điểm năm 1931. Khi Nguyễn Thị Minh Khai đến Moskva cuối năm 1934, bà đã viết rằng bà đã có gia đình với "Lin", bí danh của Hồ Chí Minh vào thời điểm này. Tuy nhiên, trong một cuộc phỏng vấn với Ban Tiếng Việt BBC, Sophie Quinn-Judge cũng nói thêm rằng mình _"không biết chắc liệu đây có thuộc về dạng hôn nhân thật sự hay không"_, vì trong các thư từ của họ thường sử dụng nhiều loại mật mã, và nói chung những người hoạt động cách mạng có thể xem là "thuộc về một thế giới khác, vượt khỏi các khuôn khổ đạo đức bình thường" nên khó mà biết rõ đời tư của họ. Ngoài ra, Sophie Quinn-Judge cũng tìm ra một bức thư mà Nguyễn Thị Minh Khai viết vào năm 1933, trong đó Nguyễn Thị Minh Khai khẳng định rằng mình không hề bị vướng bận bởi chuyện chồng con, vì "người chồng" duy nhất của bà chính là sự nghiệp Cách mạng.
 
 Theo Halberstam, năm 1945, Hồ Chí Minh từng nói với nhà báo Harold Isaacs rằng ông cô đơn, không có gia đình, không có gì cả nhưng đã từng có một người vợ. Nhưng trong nhiều cuộc gặp mặt khác, Hồ Chí Minh nhiều lần khẳng định ông không có vợ và sẽ không lấy vợ cho đến lúc dân tộc Việt Nam toàn thắng, thống nhất đất nước. Trong các thư từ, bản thân ông cũng nhiều lần khẳng định rõ ông là người không có gia đình riêng và không có con cái.
 
@@ -466,29 +432,17 @@ Nhiều nước trên thế giới đã phát hành tem bưu chính kỷ niệm 
 
 Ngày sinh nhật lần thứ 100 của Hồ Chí Minh được đoàn Việt Nam đề cử UNESCO đưa vào Lịch kỷ niệm các nhân cách vĩ đại và các sự kiện lịch sử (sau đây gọi tắt là Lịch kỷ niệm) năm 1990–1991. Đề nghị của đoàn Việt Nam đã được chép nguyên văn trong văn kiện kỳ họp Đại Hội đồng 24 từ 20 tháng 10 – 20 tháng 11 năm 1987 ở Paris, tại tiểu mục 18.65, mục 18.6 về việc lập Lịch kỷ niệm năm 1990–1991. Nguyên văn đề cử của đoàn Việt Nam, mục Lưu ý (_Noting_), mục Đề cử (_Recommend_) và mục Yêu cầu (_Request_). Tạm dịch:
 
-> 1. Lưu ý là năm 1890 đánh dấu 100 năm ngày sinh của Chủ tịch Hồ Chí
->    Minh, anh hùng giải phóng đất nước và danh nhân văn hóa
->    người Việt,
-> 2. Khuyến nghị các nước thành viên tham gia vào việc kỷ niệm ngày
->    sinh lần thứ 100 của Chủ tịch Hồ Chí Minh bằng cách tổ chức những sự kiện
->    tưởng nhớ đến ông, để tuyên truyền rộng rãi những hiểu biết về sự vĩ đại
->    của những tư tưởng và những việc Hồ Chí Minh đã làm cho sự nghiệp giải
->    phóng dân tộc;
-> 3. Yêu cầu Tổng Giám đốc UNESCO thực hiện các bước thích hợp để kỷ
->    niệm ngày sinh lần thứ 100 của Chủ tịch Hồ Chí Minh và hỗ trợ các hoạt
->    động kỷ niệm được tổ chức trong dịp này, đặc biệt các hoạt động tổ chức
->    tại Việt Nam.
+> 1. Lưu ý là năm 1890 đánh dấu 100 năm ngày sinh của Chủ tịch Hồ Chí Minh, anh hùng giải phóng đất nước và danh nhân văn hóa người Việt,
+> 2. Khuyến nghị các nước thành viên tham gia vào việc kỷ niệm ngày sinh lần thứ 100 của Chủ tịch Hồ Chí Minh bằng cách tổ chức những sự kiện tưởng nhớ đến ông, để tuyên truyền rộng rãi những hiểu biết về sự vĩ đại của những tư tưởng và những việc Hồ Chí Minh đã làm cho sự nghiệp giải phóng dân tộc;
+> 3. Yêu cầu Tổng Giám đốc UNESCO thực hiện các bước thích hợp để kỷ niệm ngày sinh lần thứ 100 của Chủ tịch Hồ Chí Minh và hỗ trợ các hoạt động kỷ niệm được tổ chức trong dịp này, đặc biệt các hoạt động tổ chức tại Việt Nam.
 
 Đề cử của đoàn Việt Nam đã được Đại Hội đồng khóa 24 (họp từ ngày 20 tháng 10 tới ngày 20 tháng 11 năm 1987) của UNESCO thông qua và ban hành dưới dạng Nghị quyết, quyển số 01. Dưới sự chủ tọa của ông Guillermo Putzeys Alvarez, điều hành khóa họp và ông Amadou-Mahtar M'Bow (Chủ tịch UNESCO nhiệm kỳ 1974-1987), đã thông qua _Nghị quyết số 24C/18.65_ về kỷ niệm 100 năm ngày sinh của Chủ tịch Hồ Chí Minh.
 
 Cụm từ "Anh hùng giải phóng đất nước và danh nhân văn hóa người Việt" (_Vietnamese hero of national liberation and great man of culture_) xuất hiện 1 lần tại mục _Lưu ý_ trong đề cử của đoàn Việt Nam, văn kiện khóa họp 24. Cụm từ "danh nhân văn hóa" (_great man of culture_) xuất hiện tổng cộng 3 lần trong cơ sở dữ liệu của UNESCO từ năm 1974 – nay (2017):
 
-1. Lần đầu tiên: năm 1987, văn bản kỳ
-   họp Đại Hội đồng lần thứ 24, mục 18.6 lập Lịch kỷ niệm 1990-1991, trong nội dung 18.65 đoàn Việt Nam đề cử ngày sinh lần thứ 100 của Chủ tịch Hồ Chí Minh
-2. Lần thứ hai: năm 1995, văn bản kỳ
-   họp 147 Hội đồng Điều hành (_Executive Board_) ngày 29 tháng 9 năm 1995 để lập Lịch kỷ niệm 1996-1997, trong nội dung của đoàn Philippines, có nhắc lại cụm từ này.
-3. Lần thứ ba: năm 2001, văn bản kỳ họp
-   Đại Hội đồng lần thứ 31, ông Phạm Văn Khiêm nhắc lại cụm từ này khi nói về Hồ Chí Minh trong phát biểu của mình.
+1. Lần đầu tiên: năm 1987, văn bản kỳ họp Đại Hội đồng lần thứ 24, mục 18.6 lập Lịch kỷ niệm 1990-1991, trong nội dung 18.65 đoàn Việt Nam đề cử ngày sinh lần thứ 100 của Chủ tịch Hồ Chí Minh
+2. Lần thứ hai: năm 1995, văn bản kỳ họp 147 Hội đồng Điều hành (_Executive Board_) ngày 29 tháng 9 năm 1995 để lập Lịch kỷ niệm 1996-1997, trong nội dung của đoàn Philippines, có nhắc lại cụm từ này.
+3. Lần thứ ba: năm 2001, văn bản kỳ họp Đại Hội đồng lần thứ 31, ông Phạm Văn Khiêm nhắc lại cụm từ này khi nói về Hồ Chí Minh trong phát biểu của mình.
 
 Tuy nhiên do sự phản đối của một số người tại Pháp, để tránh rắc rối chính trị nên UNESCO đã không in tên ông trong Lịch kỷ niệm năm 1990-1991 Trong cuốn sách Contesting Indochina của M. Kathryn Edwards, Phó Giáo sư Sử học Pháp tại Đại học Tulane có nói đề cử vinh danh Hồ Chí Minh của UNESCO bị chống đối mạnh từ Hội Cựu chiến binh Quốc gia và bạn bè Đông Dương (_Association nationale des anciens et amis de l'Indochine_ – ANAI, một tổ chức gồm các cựu binh quân đội Pháp từng tham chiến ở Việt Nam giai đoạn 1945–1954, năm 2012 đã bị giải thể): _"Vào năm 1988-89, Hội (ANAI) đã tổ chức một chiến dịch thành công chống lại đề xuất của UNESCO kỷ niệm sinh nhật lần thứ 100 của Hồ Chí Minh đã được lên kế hoạch cho năm 1990; mặc dù Hội thừa nhận ông Hồ là một "người đàn ông trung thực" và một "người yêu nước", Hội cũng xem ông là một "thủ phạm của tội ác chống lại loài người, chống lại chính người dân của mình, và chống lại quân đội nước ngoài" (chỉ quân đội Pháp). Vấn đề được đưa ra Quốc hội Pháp bởi đại diện cánh hữu Eric Raoult (thuộc Đảng liên minh vì phong trào nhân dân, UMP), người đã trình Quốc hội với quan điểm gần như hoàn toàn tương đồng với ANAI. Ông còn lập luận xa hơn rằng Quốc hội đang tranh luận xem có thiết lập tình trạng "tù binh của Việt Minh" hay không, nó có vẻ vô lý khi vinh danh người đã chịu trách nhiệm cho việc đối xử với các tù binh Pháp này. Cuối cùng, Chính phủ Pháp đã ra quyết định bãi bỏ những lễ kỷ niệm cấp nhà nước cho sinh nhật 100 [của Hồ Chí Minh]"._
 
@@ -496,8 +450,7 @@ Trong cuốn sách về tiểu sử Hồ Chí Minh của Pierre Brocheux cũng c
 
 Tại hội thảo quốc tế _"Chủ tịch Hồ Chí Minh – Anh hùng giải phóng dân tộc Việt Nam, Nhà văn hóa lớn"_ ở Hà Nội tháng 3 năm 1990, Giám đốc UNESCO khu vực châu Á – Thái Bình Dương Modagat Ahmet phát biểu: _"Hội nghị UNESCO phiên thứ 24 đã quyết định kỷ niệm 100 năm ngày sinh của Người vào năm 1990. Đây là một cử chỉ tôn kính đối với một nhân vật vĩ đại đã cống hiến trọn đời mình cho sứ mệnh tự do và độc lập. UNESCO rất vui mừng được tham gia vào sự kiện đáng ghi nhớ này. Điều đó biểu hiện sự cam kết sâu sắc của tổ chức này trong việc duy trì các giá trị và công lao của các nhân vật vĩ đại được nhân loại công nhận và kính trọng"._ Ngày 24 tháng 11 năm 2017, Văn phòng UNESCO tại Hà Nội đã tham gia một triển lãm ảnh và hội nghị quốc tế kỷ niệm 30 năm UNESCO ban hành Nghị quyết 24C/18.65, Đại diện UNESCO tại Việt Nam là ông Michael Croft bày tỏ: _"Đối với tôi, thiên tài của Hồ Chí Minh không chỉ đơn giản là sự hiểu biết và chuẩn bị cho cuộc đấu tranh lâu dài để giải phóng dân tộc, mà còn là sự dự đoán, cân nhắc những yêu cầu của một hòa bình trong tương lai, và kết hợp các yếu tố này vào việc ra quyết định của mình."_ Trước đó, Tổng giám đốc UNESCO, bà Irina Bokova, cũng bày tỏ cảm hứng về Hồ Chí Minh trong bài phát biểu kỷ niệm Nghị quyết do đoàn đại biểu thường trực Việt Nam tổ chức tại UNESCO vào ngày 13 tháng 11 năm 2017 tại Paris, Pháp.
 
-Văn bản gốc đề cử kỷ niệm 100 năm Ngày sinh Hồ Chí Minh của Việt Nam được in trong _"Tập biên bản của Đại Hội đồng UNESCO khóa họp lần thứ 24 tại Paris, từ ngày 20-10 đến 20-11 năm 1987, Quyển 1: NGHỊ QUYẾT"_, được UNESCO xuất bản đồng thời bằng 6 thứ tiếng (tiếng Pháp, tiếng Anh, tiếng Ả Rập, tiếng Trung Quốc, tiếng Tây Ban Nha và tiếng Nga), được in và đóng quyển tại xưởng in của UNESCO, Paris, vào năm 1988. Năm
-2010, văn bản gốc bằng tiếng Pháp của bản Nghị quyết tôn vinh Hồ Chí Minh của UNESCO đã được Tổng Giám đốc UNESCO là bà Irina Bokova trao tặng cho Bảo tàng Hồ Chí Minh để trưng bày.
+Văn bản gốc đề cử kỷ niệm 100 năm Ngày sinh Hồ Chí Minh của Việt Nam được in trong _"Tập biên bản của Đại Hội đồng UNESCO khóa họp lần thứ 24 tại Paris, từ ngày 20-10 đến 20-11 năm 1987, Quyển 1: NGHỊ QUYẾT"_, được UNESCO xuất bản đồng thời bằng 6 thứ tiếng (tiếng Pháp, tiếng Anh, tiếng Ả Rập, tiếng Trung Quốc, tiếng Tây Ban Nha và tiếng Nga), được in và đóng quyển tại xưởng in của UNESCO, Paris, vào năm 1988. Năm 2010, văn bản gốc bằng tiếng Pháp của bản Nghị quyết tôn vinh Hồ Chí Minh của UNESCO đã được Tổng Giám đốc UNESCO là bà Irina Bokova trao tặng cho Bảo tàng Hồ Chí Minh để trưng bày.
 
 #### Các bình chọn của Tuần báo Time
 
@@ -505,12 +458,9 @@ Tuần báo TIME của Hoa Kỳ bình chọn Hồ Chí Minh là một trong 100 
 
 Ngày 15 tháng 10 năm 2010, báo Time cũng đã bầu chọn Hồ Chí Minh là một trong 10 tù nhân chính trị nổi bật chiến đấu cho tự do nổi tiếng nhất mọi thời đại cùng với Aung San Suu Kyi, Nelson Mandela, Martin Luther King Jr., Mohandas Gandhi...
 
-- Bộ tem đầu tiên của
-  Việt Nam phát hành ngày 2 tháng 9 năm 1946.
-- Một trong những con
-  tem đầu tiên của Việt Nam (Tem giấy dó).
-- Tem Liên Xô tưởng
-  niệm Hồ Chí Minh, 1990.
+- Bộ tem đầu tiên của Việt Nam phát hành ngày 2 tháng 9 năm 1946.
+- Một trong những con tem đầu tiên của Việt Nam (Tem giấy dó).
+- Tem Liên Xô tưởng niệm Hồ Chí Minh, 1990.
 
 ## Ảnh hưởng của Hồ Chí Minh ở Việt Nam ngày nay
 
@@ -519,33 +469,22 @@ Tại Việt Nam, hình ảnh Hồ Chí Minh phổ biến khắp nơi như là m
 Ngoài những phát biểu của chính Hồ Chí Minh và hình vẽ, hình chụp của ông, có nhiều câu nói và khẩu hiệu tuyên truyền lấy cảm hứng từ Hồ Chí Minh, có thể đọc thấy ở mọi nơi, đó là:
 
 - _Đời đời nhớ ơn Bác Hồ vĩ đại!_
-- _Sống, chiến đấu, lao động và học tập theo tấm gương của Chủ tịch Hồ Chí
-  Minh._
+- _Sống, chiến đấu, lao động và học tập theo tấm gương của Chủ tịch Hồ Chí Minh._
 - _Chủ tịch Hồ Chí Minh vĩ đại sống mãi trong sự nghiệp chúng ta!_
 - _Vì lý tưởng của Bác Hồ vĩ đại, sẵn sàng!_
-- _Toàn dân rèn luyện thân thể theo gương Bác Hồ vĩ đại!_ (thường được
-  sử dụng trong nhiều sự kiện, giải đấu thể thao)
+- _Toàn dân rèn luyện thân thể theo gương Bác Hồ vĩ đại!_ (thường được sử dụng trong nhiều sự kiện, giải đấu thể thao)
 
 ## Tác phẩm
 
-- _Tuyên ngôn Độc lập_. Trong các tác phẩm của ông, có thể nói bản
-  Tuyên ngôn Độc lập do ông biên soạn là có tiếng vang nhất và được sánh vai cùng các bản Tuyên ngôn Độc lập trong lịch sử Việt Nam như Bài thơ Thần Nam quốc Sơn hà (tương truyền của Lý Thường Kiệt) và Bình Ngô đại cáo (của Nguyễn Trãi).
-- _Bản án chế độ thực dân Pháp_
-  (1925).
-- _Đường kách mệnh_
-  (1927).
-- _Con rồng tre_
-  (1922, kịch, đả kích vua Khải Định).
-- Các truyện ngắn: _Pari_ (1922,
-  _Nhân đạo_), _Lời than vãn của bà Trưng trắc_ (1922, _Nhân đạo_), _Con người biết mùi hun khói_ (1922, _Nhân đạo_), _Vi hành_ (1923, _Nhân đạo_), _Đoàn kết giai cấp_ (1924, _Người cùng khổ_), _Con rùa_ (1925, _Người cùng khổ_), _Những trò lố hay là Va-ren và Phan Bội Châu_ (1925, _Người cùng khổ_).
-- _Nhật ký trong tù_
-  (1942, thơ).
-- _Sửa đổi lối làm việc_
-  (1947).
-- _Những mẩu chuyện về đời hoạt động của Hồ Chủ tịch_ (bút danh
-  Trần Dân Tiên)
-- _Vừa đi đường vừa kể chuyện_ (bút danh T. Lan). Trong cuốn sách này, Hồ Chí Minh hóa thân thành một cán bộ trong đoàn
-  tùy tùng (T. Lan), đi công tác cùng với Hồ Chí Minh trong rừng núi Việt Bắc và được Hồ Chí Minh vui miệng kể cho nghe nhiều chuyện.
+- _Tuyên ngôn Độc lập_. Trong các tác phẩm của ông, có thể nói bản Tuyên ngôn Độc lập do ông biên soạn là có tiếng vang nhất và được sánh vai cùng các bản Tuyên ngôn Độc lập trong lịch sử Việt Nam như Bài thơ Thần Nam quốc Sơn hà (tương truyền của Lý Thường Kiệt) và Bình Ngô đại cáo (của Nguyễn Trãi).
+- _Bản án chế độ thực dân Pháp_ (1925).
+- _Đường kách mệnh_ (1927).
+- _Con rồng tre_ (1922, kịch, đả kích vua Khải Định).
+- Các truyện ngắn: _Pari_ (1922, _Nhân đạo_), _Lời than vãn của bà Trưng trắc_ (1922, _Nhân đạo_), _Con người biết mùi hun khói_ (1922, _Nhân đạo_), _Vi hành_ (1923, _Nhân đạo_), _Đoàn kết giai cấp_ (1924, _Người cùng khổ_), _Con rùa_ (1925, _Người cùng khổ_), _Những trò lố hay là Va-ren và Phan Bội Châu_ (1925, _Người cùng khổ_).
+- _Nhật ký trong tù_ (1942, thơ).
+- _Sửa đổi lối làm việc_ (1947).
+- _Những mẩu chuyện về đời hoạt động của Hồ Chủ tịch_ (bút danh Trần Dân Tiên)
+- _Vừa đi đường vừa kể chuyện_ (bút danh T. Lan). Trong cuốn sách này, Hồ Chí Minh hóa thân thành một cán bộ trong đoàn tùy tùng (T. Lan), đi công tác cùng với Hồ Chí Minh trong rừng núi Việt Bắc và được Hồ Chí Minh vui miệng kể cho nghe nhiều chuyện.
 - Di chúc Hồ Chí Minh
 
 ## Tên gọi, bí danh, bút danh
@@ -560,71 +499,45 @@ Hồ Chí Minh là nguồn cảm hứng cho nhiều nhạc sĩ, nhà thơ sáng 
 
 ### Âm nhạc
 
-- Bài hát _"Ca ngợi Hồ Chủ tịch"_ của
-  nhạc sĩ Văn Cao:
+- Bài hát _"Ca ngợi Hồ Chủ tịch"_ của nhạc sĩ Văn Cao:
 
-> \*Người về đem tới ngày vui Mùa thu nắng tỏa
+> _Người về đem tới ngày vui Mùa thu nắng tỏa Ba Đình Với tiếng Người còn dịu dàng như tiếng đất trời. Người về đem tới xuân đời từ đất nước cằn, Từ bùn lầy cả cuộc đời vùng lên_.
 
-    Ba Đình Với tiếng Người còn dịu dàng như tiếng đất trời. Người về đem tới xuân đời từ đất nước cằn, Từ bùn lầy cả cuộc đời vùng lên*.
+- Bài hát _"Ca ngợi Hồ Chủ tịch"_ của nhạc sĩ Lưu Hữu Phước:
 
-- Bài hát _"Ca ngợi Hồ Chủ tịch"_ của
-  nhạc sĩ Lưu Hữu Phước:
+> _Hồ Chí Minh sáng ngời gương đấu tranh. Vững bền đưa chúng ta vượt khó khăn. Hồ Chí Minh muôn năm chỉ lối cho nhân dân. Đến ngày chiến thắng vẻ vang_.
 
-> \*Hồ Chí Minh sáng ngời gương đấu tranh. Vững bền đưa chúng ta vượt khó
+- Bài hát _"Người là niềm tin tất thắng"_ của nhạc sĩ Chu Minh:
 
-    khăn. Hồ Chí Minh muôn năm chỉ lối cho nhân dân. Đến ngày chiến thắng vẻ vang*.
+> _Đất nước nghiêng mình đời đời nhớ ơn. Tên người sống mãi với non sông Việt Nam. Lời thề sắt son theo tiếng bác gọi, bốn ngàn năm dồn lại hôm nay, người sống trong muôn triệu trái tim... Thế giới nghiêng mình, loài người tiếc thương. Đây người chiến sĩ đấu tranh cho tự do. Người là ước mơ của các dân tộc. Tiếng người vang vọng đến mai sau. Nguyện ước theo con đường Bác đi..._
 
-- Bài hát _"Người là niềm tin tất thắng"_ của nhạc sĩ
-  Chu Minh:
+- Bài hát _"Bác Hồ, một tình yêu bao la"_ của nhạc sĩ Thuận Yến
 
-> \*Đất nước nghiêng mình đời đời nhớ ơn. Tên người sống mãi với non sông
+> _... Bác thương các cụ già xuân về gửi biếu lụa, Bác yêu đàn cháu nhỏ trung thu gửi cho quà. Bác thương đoàn dân công đêm nay ngủ ngoài rừng, Bác thương người chiến sĩ đứng gác ngoài biên cương..._
 
-    Việt Nam. Lời thề sắt son theo tiếng bác gọi, bốn ngàn năm dồn lại hôm nay, người sống trong muôn triệu trái tim... Thế giới nghiêng mình, loài người tiếc thương. Đây người chiến sĩ đấu tranh cho tự do. Người là ước mơ của các dân tộc. Tiếng người vang vọng đến mai sau. Nguyện ước theo con đường Bác đi...*
+- Bài hát _"Hồ Chí Minh đẹp nhất tên người"_ của nhạc sĩ Trần Kiết Tường:
 
-- Bài hát _"Bác Hồ, một tình yêu bao la"_ của
-  nhạc sĩ Thuận Yến
+> _... Trên cánh đồng miền Nam, đau thương mây phủ chân trời. Khi ca lên Hồ Chí Minh, nghe lòng phơi phới niềm tin..._
 
-> \*... Bác thương các cụ già xuân về gửi biếu lụa, Bác yêu đàn cháu nhỏ
+- Bài hát _The Ballad of Ho Chi Minh_ (_Bài ca Hồ Chí Minh_) của nhạc sĩ người Anh Ewan MacColl:
 
-    trung thu gửi cho quà. Bác thương đoàn dân công đêm nay ngủ ngoài rừng, Bác thương người chiến sĩ đứng gác ngoài biên cương...*
+> _... From VietBac to the SaiGon Delta. Marched the armies of Viet Minh. And the wind stirs the banners of the Indo-Chinese people. Peace and freedom and Ho Chi Minh..._
 
-- Bài hát _"Hồ Chí Minh đẹp nhất tên người"_ của nhạc sĩ
-  Trần Kiết Tường:
+- Bài hát _Teacher Uncle Ho_ (_Bác Hồ – Thầy giáo_) của Pete Seeger:
 
-> \*... Trên cánh đồng miền Nam, đau thương mây phủ chân trời. Khi ca lên
+> _... I'll have to say in my own way. The only way I know, that we learned power to the people and the power to know. From Teacher Uncle Ho!_
 
-    Hồ Chí Minh, nghe lòng phơi phới niềm tin...*
+- Bài hát _Inolvidable Ho Chi Minh_ (_Hồ Chí Minh – Không thể nào quên_) của Alí Primera:
 
-- Bài hát
-  _The Ballad of Ho Chi Minh_ (_Bài ca Hồ Chí Minh_) của nhạc sĩ người Anh Ewan MacColl:
+> _Tenía la figura pequeña y la barbita blanca el camarada Ho Chi Minh querido tío Ho Chi Minh inolvidable Ho Chi Minh indoblegable Ho Chi Minh inolvidable Ho Chi Minh indoblegable Ho Chi Minh..._
 
-> \*... From VietBac to the SaiGon Delta. Marched the armies of Viet Minh.
-
-    And the wind stirs the banners of the Indo-Chinese people. Peace and freedom and Ho Chi Minh...*
-
-- Bài hát
-  _Teacher Uncle Ho_ (_Bác Hồ – Thầy giáo_) của Pete Seeger:
-
-> \*... I'll have to say in my own way. The only way I know, that we
-
-    learned power to the people and the power to know. From Teacher Uncle Ho!*
-
-- Bài hát
-  _Inolvidable Ho Chi Minh_ (_Hồ Chí Minh – Không thể nào quên_) của Alí Primera:
-
-> \*Tenía la figura pequeña y la barbita blanca el camarada Ho Chi Minh
-
-    querido tío Ho Chi Minh inolvidable Ho Chi Minh indoblegable Ho Chi Minh inolvidable Ho Chi Minh indoblegable Ho Chi Minh...*
-
-- Nhiều sáng tác khác: _"Bác đang cùng chúng cháu hành quân"_ (Huy Thục), _"Thanh niên làm theo lời Bác"_ (Hoàng Hà), _"Tuổi trẻ thế hệ Bác Hồ"_ (Triều Dâng), _"Tấm áo Bác Hồ"_, _"Gửi tới Bác Hồ"_ (Kapapúi – Tường Vi),
-  _"Đêm nghe hát đò đưa nhớ Bác"_ (An Thuyên), _"Vầng trăng Ba Đình"_, _"Miền Trung nhớ Bác"_, _"Người về thăm quê"_ (Thuận Yến), _"Bên lăng Bác Hồ"_, _"Bên tượng đài Bác Hồ"_ (Lê Giang), _"Đêm Trường Sơn nhớ Bác"_ (Trần Trung), _"Bác Hồ sống mãi với Tây Nguyên"_, _"Cô gái Pakô con cháu Bác Hồ"_ (Huy Thục), _"Đôi dép Bác Hồ"_ (Văn An – thơ Tạ Hữu Yên), _"Bài ca dâng Bác"_ (Trọng Loan), _"Như có Bác Hồ trong ngày đại thắng"_ (Phạm Tuyên), _"Lời Bác dặn trước lúc đi xa"_ (Trần Hoàn), _"Tình Bác sáng đời ta"_ (Lưu Hữu Phước), _"Hồ Chí Minh đẹp nhất tên người"_ (Trần Kiết Tường)...
+- Nhiều sáng tác khác: _"Bác đang cùng chúng cháu hành quân"_ (Huy Thục), _"Thanh niên làm theo lời Bác"_ (Hoàng Hà), _"Tuổi trẻ thế hệ Bác Hồ"_ (Triều Dâng), _"Tấm áo Bác Hồ"_, _"Gửi tới Bác Hồ"_ (Kapapúi – Tường Vi), _"Đêm nghe hát đò đưa nhớ Bác"_ (An Thuyên), _"Vầng trăng Ba Đình"_, _"Miền Trung nhớ Bác"_, _"Người về thăm quê"_ (Thuận Yến), _"Bên lăng Bác Hồ"_, _"Bên tượng đài Bác Hồ"_ (Lê Giang), _"Đêm Trường Sơn nhớ Bác"_ (Trần Trung), _"Bác Hồ sống mãi với Tây Nguyên"_, _"Cô gái Pakô con cháu Bác Hồ"_ (Huy Thục), _"Đôi dép Bác Hồ"_ (Văn An – thơ Tạ Hữu Yên), _"Bài ca dâng Bác"_ (Trọng Loan), _"Như có Bác Hồ trong ngày đại thắng"_ (Phạm Tuyên), _"Lời Bác dặn trước lúc đi xa"_ (Trần Hoàn), _"Tình Bác sáng đời ta"_ (Lưu Hữu Phước), _"Hồ Chí Minh đẹp nhất tên người"_ (Trần Kiết Tường)...
 
 ### Thơ, văn, tuyển tập
 
 [Hình ảnh: Tác phẩm"Bác Hồ và ba em thiếu nhi Trung-Nam-Bắc"(tranh lụa vẽ bằng máu1947) của họa sĩDiệp Minh Châu.]
 
-- Bài thơ _"Người đi tìm hình của nước"_ của nhà thơ
-  Chế Lan Viên:
+- Bài thơ _"Người đi tìm hình của nước"_ của nhà thơ Chế Lan Viên:
 
 > _...Có nhớ chăng hỡi gió rét thành Ba-lê_
 > _Một viên gạch hồng Bác chống lại cả một mùa băng giá_
@@ -636,16 +549,14 @@ Hồ Chí Minh là nguồn cảm hứng cho nhiều nhạc sĩ, nhà thơ sáng 
 > _...Nhớ ông cụ mắt sáng ngời_
 > _Áo nâu túi vải đẹp tươi lạ thường..._
 
-- Bài thơ _"Bác ơi"_ của
-  Tố Hữu, sáng tác ngày 6 tháng 9 năm 1969, ngay sau khi Chủ tịch Hồ Chí Minh qua đời, có đoạn:
+- Bài thơ _"Bác ơi"_ của Tố Hữu, sáng tác ngày 6 tháng 9 năm 1969, ngay sau khi Chủ tịch Hồ Chí Minh qua đời, có đoạn:
 
 > _Bác để tình thương cho chúng con_
 > _Một đời thanh bạch, chẳng vàng son_
 > _Mong manh áo vải hồn muôn trượng_
 > _Hơn tượng đồng phơi những lối mòn._
 
-- Bài thơ _"Viếng lăng Bác"_ của
-  Viễn Phương:
+- Bài thơ _"Viếng lăng Bác"_ của Viễn Phương:
 
 > _Bác nằm trong giấc ngủ bình yên_
 > _Giữa một vầng trǎng sáng dịu hiền_
@@ -678,21 +589,15 @@ _Hồ Chí Minh toàn tập_, ấn bản I: Nhà Xuất bản Sự thật (1980�
 
 ### Điện ảnh
 
-- Hình tượng _Hồ Chí Minh_ trong phim truyện video
-  _"Hà Nội – Mùa đông 1946"_ do NSƯT Tiến Hợi thể hiện.
-- Hình tượng _Nguyễn Tất Thành_ (Văn Ba) trong phim truyện nhựa
-  _"Hẹn gặp lại Sài Gòn"_ do NSƯT Tiến Hợi thể hiện.
-- Hình tượng _Tống Văn Sơ_ trong phim truyện
-  _"Nguyễn Ái Quốc ở Hồng Kông"_ do NSƯT Trần Lực thể hiện.
+- Hình tượng _Hồ Chí Minh_ trong phim truyện video _"Hà Nội – Mùa đông 1946"_ do NSƯT Tiến Hợi thể hiện.
+- Hình tượng _Nguyễn Tất Thành_ (Văn Ba) trong phim truyện nhựa _"Hẹn gặp lại Sài Gòn"_ do NSƯT Tiến Hợi thể hiện.
+- Hình tượng _Tống Văn Sơ_ trong phim truyện _"Nguyễn Ái Quốc ở Hồng Kông"_ do NSƯT Trần Lực thể hiện.
 
 ### Sân khấu
 
-- Hình tượng _Hồ Chí Minh_ trong vở kịch _"Đêm trắng"_ do NSƯT
-  Tiến Hợi thể hiện.
-- Hình tượng _Hồ Chí Minh_ trong vở chèo _"Những vần thơ thép"_ do
-  NSƯT Mạnh Kiên thể hiện.
-- Hình tượng _Hồ Chí Minh_ trong nhiều vở kịch nói do nghệ sĩ
-  Văn Tân thể hiện từ năm 1974 – nay.
+- Hình tượng _Hồ Chí Minh_ trong vở kịch _"Đêm trắng"_ do NSƯT Tiến Hợi thể hiện.
+- Hình tượng _Hồ Chí Minh_ trong vở chèo _"Những vần thơ thép"_ do NSƯT Mạnh Kiên thể hiện.
+- Hình tượng _Hồ Chí Minh_ trong nhiều vở kịch nói do nghệ sĩ Văn Tân thể hiện từ năm 1974 – nay.
 
 ## Đánh giá
 
@@ -718,62 +623,37 @@ Là một người lãnh đạo cuộc đấu tranh của Việt Nam giành đ�
 - Bài hát về Hồ Chí Minh
 - Thầu Chín ở Xiêm
 
-- Hồ Chí Minh
-  tại Từ điển bách khoa Việt Nam
-- Hồ Chí Minh
-  tại _Encyclopædia Britannica_
-- Chi Minh Ho (1890–1969)
-  trên IMDb
-- _Thầu Chín ở Xiêm_
-  trên Internet Movie Database
+- Hồ Chí Minh tại Từ điển bách khoa Việt Nam
+- Hồ Chí Minh tại _Encyclopædia Britannica_
+- Chi Minh Ho (1890–1969) trên IMDb
+- _Thầu Chín ở Xiêm_ trên Internet Movie Database
 
-- Lời kêu gọi toàn quốc chống Mỹ cứu nước của Hồ Chủ tịch
-  trên YouTube tải lên 8/4/2010.
-- Chủ tịch Hồ Chí Minh nói chuyện tại ĐH Phụ nữ toàn quốc lần III
-  trên YouTube tải lên 7/5/2010.
-- Hồ Chủ tịch nói chuyện tại cuộc mitting của nhân dân Thủ đô
-  trên YouTube tải lên 16/5/2010.
-- Hồ Chủ tịch nói chuyện với Quốc hội nước VNDCCH
-  trên YouTube tải lên 17/5/2010.
-- Hồ Chủ tịch phát biểu tại lễ kỷ niệm 30 năm thành lập Đảng
-  trên YouTube tải lên 8/8/2010.
-- Thơ chúc Tết của Bác Hồ năm 1968 và 1969
-  trên YouTube tải lên 2/2/2010.
-- Chủ tịch Hồ Chí Minh phát biểu tại đại hội thi đua anh hùng phần
-  1 trên YouTube tải lên 17/9/2010.
-- Chủ tịch Hồ Chí Minh phát biểu tại đại hội thi đua anh hùng phần
-  2 trên YouTube tải lên 17/9/2010.
-- The actual voice of Ho Chi Minh - Chủ tịch Hồ Chí Minh phát biểu bằng
-  tiếng Anh trên YouTube
+- Lời kêu gọi toàn quốc chống Mỹ cứu nước của Hồ Chủ tịch trên YouTube tải lên 8/4/2010.
+- Chủ tịch Hồ Chí Minh nói chuyện tại ĐH Phụ nữ toàn quốc lần III trên YouTube tải lên 7/5/2010.
+- Hồ Chủ tịch nói chuyện tại cuộc mitting của nhân dân Thủ đô trên YouTube tải lên 16/5/2010.
+- Hồ Chủ tịch nói chuyện với Quốc hội nước VNDCCH trên YouTube tải lên 17/5/2010.
+- Hồ Chủ tịch phát biểu tại lễ kỷ niệm 30 năm thành lập Đảng trên YouTube tải lên 8/8/2010.
+- Thơ chúc Tết của Bác Hồ năm 1968 và 1969 trên YouTube tải lên 2/2/2010.
+- Chủ tịch Hồ Chí Minh phát biểu tại đại hội thi đua anh hùng phần 1 trên YouTube tải lên 17/9/2010.
+- Chủ tịch Hồ Chí Minh phát biểu tại đại hội thi đua anh hùng phần 2 trên YouTube tải lên 17/9/2010.
+- The actual voice of Ho Chi Minh - Chủ tịch Hồ Chí Minh phát biểu bằng tiếng Anh trên YouTube
 
-- Chủ tịch Hồ Chí Minh đọc bản Tuyên ngôn độc lập
-  Lưu trữ ngày 20 tháng 3 năm 2007 tại Wayback Machine
-- Các tác phẩm của Hồ Chí Minh, website của
-  Đảng Cộng sản Việt Nam.
+- Chủ tịch Hồ Chí Minh đọc bản Tuyên ngôn độc lập Lưu trữ ngày 20 tháng 3 năm 2007 tại Wayback Machine
+- Các tác phẩm của Hồ Chí Minh, website của Đảng Cộng sản Việt Nam.
 - Toàn văn di chúc (bản đầy đủ)
 - Những bức thư của Chủ tịch Hồ Chí Minh
 
-- Ngô Tự Lập (2004), "Về thực tiễn luận nhân đạo Hồ Chí Minh và nhiệm vụ đổi mới Đảng hiện
-  nay" truy cập 7/4/2015.
-- Clark D. Neher,
-  _Southeast Asia: crossroads of the world_, Southeast Asia Publications, Center for Southeast Asian Studies, Northern Illinois University, 2000. ISBN 1-891134-06-X.
+- Ngô Tự Lập (2004), "Về thực tiễn luận nhân đạo Hồ Chí Minh và nhiệm vụ đổi mới Đảng hiện nay" truy cập 7/4/2015.
+- Clark D. Neher, _Southeast Asia: crossroads of the world_, Southeast Asia Publications, Center for Southeast Asian Studies, Northern Illinois University, 2000. ISBN 1-891134-06-X.
 - Bác Hồ kính yêu
 - Tiểu sử Hồ Chí Minh trên website của Bộ Ngoại giao Việt Nam
-- Trang đặc biệt của đài BBC: _Hồ Chí Minh - Huyền thoại và Di sản_,
-  19.05.1890 - 2005
-- Lời truyền miệng dân gian về thân thế của Hồ Chí Minh,
-  Trần Quốc Vượng kể lại.
+- Trang đặc biệt của đài BBC: _Hồ Chí Minh - Huyền thoại và Di sản_, 19.05.1890 - 2005
+- Lời truyền miệng dân gian về thân thế của Hồ Chí Minh, Trần Quốc Vượng kể lại.
 - Cuộc gặp gỡ với người suốt đời chờ đợi thần tượng Nguyễn Tất Thành
 - Chuyên đề kỷ niệm 110 năm sinh nhật Bác - báo VDC
-- David Thomas và Charles Fenn
-  _Ho Chi Minh - A potrait_
-- (Sách nghệ thuật với số bản in giới hạn).
-- Tìm hiểu về Chủ tịch Hồ Chí Minh: Những tên gọi, bí danh, bút danh của
-  Chủ tịch Hồ Chí Minh
+- David Thomas và Charles Fenn _Ho Chi Minh - A potrait_ - (Sách nghệ thuật với số bản in giới hạn).
+- Tìm hiểu về Chủ tịch Hồ Chí Minh: Những tên gọi, bí danh, bút danh của Chủ tịch Hồ Chí Minh
 
-- "Nhà cháu mà không đến thì đến nhà ai!", Thiếu tướng
-  Phan Văn Xoàn, nguyên cận vệ Chủ tịch Hồ Chí Minh, kể về lần Hồ Chí Minh bí mật đến chúc Tết gia đình nghèo nhất Hà Nội. Nguyễn Văn Tiến Hùng ghi, báo Tuổi Trẻ cập nhật 06/02/2008.
-- Những lần gặp 'cụ' Hồ
-- Vũ Thư Hiên kể lại trên BBC tiếng Việt.
-- Nhà báo
-  Wilfred Burchett: "Tôi lớn lên với huyền thoại về Bác Hồ, về đất nước Việt Nam"
+- "Nhà cháu mà không đến thì đến nhà ai!", Thiếu tướng Phan Văn Xoàn, nguyên cận vệ Chủ tịch Hồ Chí Minh, kể về lần Hồ Chí Minh bí mật đến chúc Tết gia đình nghèo nhất Hà Nội. Nguyễn Văn Tiến Hùng ghi, báo Tuổi Trẻ cập nhật 06/02/2008.
+- Những lần gặp 'cụ' Hồ - Vũ Thư Hiên kể lại trên BBC tiếng Việt.
+- Nhà báo Wilfred Burchett: "Tôi lớn lên với huyền thoại về Bác Hồ, về đất nước Việt Nam"
