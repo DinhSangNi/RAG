@@ -41,10 +41,8 @@ def _doc_key(doc: Document) -> str:
     return f"{docname}|{src}|{sec}|{sub}|{hash(content)}"
 
 def _rrf_fuse(list_of_doclists: List[List[Document]], rrf_k: int = 60, top_k: int = 10) -> List[Document]:
-    """
-    Reciprocal Rank Fusion on multiple ranked lists.
-    Score(doc) = sum(1/(rrf_k + rank))
-    """
+    # Reciprocal Rank Fusion on multiple ranked lists.
+    # Score(doc) = sum(1/(rrf_k + rank))
     scores: Dict[str, float] = {}
     doc_map: Dict[str, Document] = {}
 
@@ -317,13 +315,12 @@ CONTEXT:
         )
 
     def retrieve(self, question: str) -> List[Document]:
-        """
-        Two-pass retrieval:
-        - Pass 1: retrieve with raw question (small k)
-        - Extract entity/aliases/keywords via LLM from pass1 context
-        - Generate variants, retrieve each variant
-        - RRF fuse all results -> final top_k
-        """
+        # Two-pass retrieval:
+        # - Pass 1: retrieve with raw question (small k)
+        # - Extract entity/aliases/keywords via LLM from pass1 context
+        # - Generate variants, retrieve each variant
+        # - RRF fuse all results -> final top_k
+        
         print(f"\n🔍 Retrieve: '{question}'")
 
         # Pass 1 (small)

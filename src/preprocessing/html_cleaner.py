@@ -83,6 +83,8 @@ def clean_wikipedia_html(html_file_path):
 
     sections_to_kill = [
     "Tham_khảo", 
+    "Tài liệu tham khảo",
+    "Chú giải",
     "Liên_kết_ngoài", 
     "Danh_mục", 
     "Ghi_chú", 

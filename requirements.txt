@@ -1,20 +1,37 @@
-# Core LangChain packages
-langchain==0.3.0
-langchain-community==0.3.0
-langchain-core==0.3.0
-langchain-text-splitters==0.3.0
-langchain-google-genai==2.0.0
+# FastAPI và dependencies
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+aiofiles
 
-# Vector store
-pinecone-client==5.0.1
-langchain-pinecone==0.2.0
+# Database
+sqlalchemy
+psycopg2-binary
+pgvector
+alembic
 
-# Retrievers
-rank-bm25==0.2.2
+# Redis và Queue
+redis
+rq
 
-# Web scraping and parsing
-beautifulsoup4==4.12.3
-requests==2.31.0
+# LangChain và AI
+langchain
+langchain-community
+langchain-google-genai
+langchain-text-splitters
+google-generativeai
 
 # Utilities
-python-dotenv==1.0.0
+python-dotenv
+beautifulsoup4
+wikipedia
+requests
+rank-bm25
+markitdown
+aiofiles
+
+# Testing
+pytest
+httpx

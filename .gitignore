@@ -35,11 +35,14 @@ env/
 *.swo
 *~
 
-# Data (optional - uncomment if you don't want to track data)
-# data/chroma_db/
-# data/chunks/
-# data/raw_data/
-# data/processed_data/
+# Data - ignore temp upload files but keep structure
+data/temp/*
+!data/temp/.gitkeep
+
+# Legacy script data (optional - only needed for src/ scripts)
+data/chunks/
+data/raw_data/
+data/processed_data/
 
 # OS
 .DS_Store

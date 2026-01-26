@@ -3,6 +3,7 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from pinecone import Pinecone, ServerlessSpec
+from pydantic import SecretStr
 import os
 import pickle
 import time
@@ -43,7 +44,7 @@ class HybridSectionChunker:
 
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=EMBEDDING_MODEL_NAME,
-            api_key=GEMINI_API_KEY
+            api_key=SecretStr(GEMINI_API_KEY) if GEMINI_API_KEY else None  # type: ignore[arg-type]
         )
 
         self.pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -55,7 +56,7 @@ class HybridSectionChunker:
             print(f"🔧 Tạo Pinecone index mới: {index_name}")
             self.pc.create_index(
                 name=index_name,
-                dimension=int(DIMENSION_OF_MODEL),
+                dimension=int(DIMENSION_OF_MODEL) if DIMENSION_OF_MODEL else 768,  # type: ignore[arg-type]
                 metric="cosine",
                 spec=ServerlessSpec(cloud="aws", region="us-east-1"),
             )
