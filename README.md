@@ -1,332 +1,473 @@
-# 🚀 RAG System - Hệ thống Hỏi Đáp Thông Minh
-
-Hệ thống RAG (Retrieval-Augmented Generation) sử dụng Hybrid Search (BM25 + Semantic) và Google Gemini để trả lời câu hỏi dựa trên dữ liệu Wikipedia.
-
-> **🔄 UPDATE**: Hệ thống đã được chuyển từ ChromaDB sang **Pinecone** - xem chi tiết tại [PINECONE_MIGRATION.md](PINECONE_MIGRATION.md)
-
-## 📋 Yêu Cầu
-
-```bash
-pip install langchain langchain-community langchain-google-genai
-pip install pinecone-client langchain-pinecone
-pip install beautifulsoup4 requests
-pip install rank_bm25
-pip install python-dotenv
-```
-
-hoặc chạy
-
-```bash
-pip install -r requirements.txt
-```
-
-## ⚙️ Cấu Hình
-
-1. **Tạo file `.env`** từ template:
-
-   ```bash
-   copy .env.example .env
-   ```
-
-2. **Điền API Keys** vào file `.env`:
-
-   ```env
-   PINECONE_API_KEY=your_pinecone_api_key_here
-   GOOGLE_API_KEY=your_google_api_key_here
-   ```
-
-3. **Lấy Pinecone API Key**:
-   - Đăng ký tại [https://www.pinecone.io/](https://www.pinecone.io/)
-   - Tạo API key từ dashboard
-
-## 🏃 Cách Chạy Chương Trình
-
-### Chạy Menu Chính
-
-```bash
-python -m src.main
-```
-
-Lưu ý set lại GEMINII_API_KEY trong file text_chunker.py
-
-Bạn sẽ thấy menu với 5 tùy chọn:
-
-```
-================================================================================
-CHỌN CHỨC NĂNG:
-================================================================================
-1. 📝 Chuẩn bị data
-2. 🔪 Chunking và lưu vào Vector DB
-3. 💬 RAG Chat (Interactive)
-4. 🚀 Chạy cả hai (Chunking → Chat)
-0. ❌ Thoát
-================================================================================
-```
-
-## 📖 Hướng Dẫn Sử Dụng
-
-### Option 1: 📝 Chuẩn Bị Data
-
-**Chức năng:** Lấy dữ liệu từ Wikipedia và xử lý thành Markdown
-
-**Các bước:**
-
-1. Nhập từ khóa tìm kiếm (ví dụ: "Hồ Chí Minh", "Võ Nguyên Giáp")
-2. Hệ thống sẽ:
-   - Tải HTML từ Wikipedia
-   - Làm sạch HTML
-   - Chuyển đổi sang Markdown chuẩn hóa
-
-**Kết quả:** File `.md` được lưu trong `data/processed_data/`
-
----
-
-### Option 2: 🔪 Chunking và Lưu vào Vector DB
-
-**Chức năng:** Tách văn bản thành chunks và lưu vào Pinecone
-
-**Cách hoạt động:**
-
-- Đọc tất cả file `.md` trong `data/processed_data/`
-- Tách theo Markdown headers (h1, h2)
-- Lưu vào Pinecone với embedding Google AI
-- Tạo file pickle cho BM25 search
-
-**Kết quả:**
-
-- Pinecone Index: `knowledge-base`
-- Pickle file: `data/chunks/knowledge_base_chunks.pkl`
-
-**Index name:** `knowledge-base` (mặc định)
-
----
-
-### Option 3: 💬 RAG Chat (Interactive)
-
-**Chức năng:** Hỏi đáp tương tác với AI
-
-**Yêu cầu:** Phải chạy Option 2 trước để có vector DB
-
-**Cách sử dụng:**
-
-```
-❓ Câu hỏi: Hồ Chí Minh sinh năm nào?
-💡 TRẢ LỜI: Hồ Chí Minh sinh vào ngày 19 tháng 5 năm 1890.
-
-❓ Câu hỏi: Võ Nguyên Giáp sinh ngày nào?
-💡 TRẢ LỜI: Võ Nguyên Giáp sinh ngày 25 tháng 8 năm 1911.
-```
-
-**Lệnh đặc biệt:**
-
-- `verbose` - Bật/tắt hiển thị context được retrieve (các chunks được get ra)
-- `quit` hoặc `exit` - Thoát chương trình
-
-**Tham số:**
-
-- **Model:** gemini-2.5-flash-lite
-- **Top K:** 10 chunks
-- **BM25 Weight:** 0.5
-- **Semantic Weight:** 0.5
-
----
-
-### Option 4: 🚀 Chạy Cả Hai (Full Pipeline)
-
-**Chức năng:** Chạy tuần tự Option 1 → Option 2 → Option 3
-
-**Quy trình:**
-
-1. Chuẩn bị data từ Wikipedia
-2. Chunking và lưu vào Vector DB
-3. Mở RAG Chat để hỏi đáp
-
-**Phù hợp cho:** Lần đầu chạy hoặc muốn cập nhật toàn bộ dữ liệu
-
----
-
-## 📁 Cấu Trúc Thư Mục
-
-```
-RAG/
-├── .env.example                     # Template cho environment variables
-├── .env                             # API Keys (không commit!)
-├── data/
-│   ├── raw_data/wikipedia/          # HTML gốc từ Wikipedia
-│   ├── processed_data/              # File Markdown đã xử lý
-│   └── chunks/                      # Pickle files cho BM25
-│       └── knowledge_base_chunks.pkl
-├── src/
-│   ├── main.py                      # File chính
-│   ├── rag_chat.py                  # RAG Chat logic
-│   ├── chunking/
-│   │   └── text_chunker.py          # Chunking logic
-│   ├── ingestion/
-│   │   └── get_data_from_wikipedia.py
-│   └── preprocessing/
-│       ├── html_cleaner.py
-│       └── normalize_markdown.py
-├── README.md
-└── PINECONE_MIGRATION.md            # Hướng dẫn migration
-```
-
-## ⚙️ Cấu Hình
-
-### Hybrid Search Weights
-
-Trong `src/rag_chat.py`, dòng 152:
-
-```python
-bm25_weight=0.5,      # Keyword search
-semantic_weight=0.5   # Semantic search
-```
-
-**Điều chỉnh:**
-
-- Tăng `bm25_weight` → Ưu tiên khớp từ khóa chính xác
-- Tăng `semantic_weight` → Ưu tiên hiểu nghĩa ngữ cảnh
-
-### Chunk Size
-
-Trong `src/main.py`, dòng 73:
-
-```python
-chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
-```
-
-**Tham số:**
-
-- `chunk_size`: Kích thước chunk tối đa (ký tự)
-- `chunk_overlap`: Số ký tự chồng lắp giữa các chunk
-
-## 🐛 Xử Lý Lỗi
-
-### Lỗi: File pkl không tồn tại
-
-```
-❌ Lỗi: [Errno 2] No such file or directory: 'data/chunks\\knowledge_base_chunks.pkl'
-```
-
-**Giải pháp:** Chạy Option 2 để tạo chunks và upload lên Pinecone
-
-### Lỗi: Invalid Pinecone API Key
-
-```
-❌ Lỗi: Invalid API key
-```
-
-**Giải pháp:**
-
-1. Kiểm tra file `.env`
-2. Đảm bảo `PINECONE_API_KEY` được set đúng
-3. Không có khoảng trắng thừa
-
-### Lỗi: Không trả lời được câu hỏi
-
-**Nguyên nhân:** Query không match với chunks
-
-**Giải pháp:**
-
-1. Bật `verbose` mode để xem context
-2. Điều chỉnh weights (tăng semantic_weight)
-3. Tăng `top_k` để retrieve nhiều chunks hơn
-
-### Lỗi: Index not found
-
-```
-❌ Lỗi: Index 'knowledge-base' not found
-```
-
-**Giải pháp:** Chạy Option 2 để tạo index trên Pinecone
-
-## 📝 Ví Dụ Câu Hỏi
-
-```
-✅ Hồ Chí Minh sinh năm nào?
-✅ Võ Nguyên Giáp sinh ngày nào?
-✅ Phạm Văn Đồng là ai?
-✅ Hồ Chí Minh có tên khai sinh là gì?
-✅ Võ Nguyên Giáp tham gia trận chiến nào?
-✅ Hồ Chí Minh đã đi qua những nước nào?
-```
-
-## 🔧 API Key
-
-File sử dụng Google Gemini API. API key được hardcode trong:
-
-- `src/chunking/text_chunker.py` (line 12)
-- `src/rag_chat.py` (line 11)
-
-**Khuyến nghị:** Chuyển sang dùng biến môi trường:
-
-```python
-import os
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-```
-
-## 🎯 Kiến Trúc Hệ Thống
-
-### 1. Data Pipeline
-
-```
-Wikipedia → HTML → Cleaned HTML → Normalized Markdown → Chunks
-```
-
-### 2. Chunking Strategy
-
-- **Markdown Header Splitter**: Tách theo headers (h1, h2)
-- **Recursive Character Splitter**: Tách sections lớn thành chunks nhỏ hơn
-- **Metadata**: Lưu thông tin headers, source file, section ID
-
-### 3. Hybrid Search
-
-- **BM25 Retriever**: Keyword-based search (sparse retrieval)
-- **Semantic Retriever**: Vector similarity search (dense retrieval)
-- **Ensemble Retriever**: Kết hợp 2 phương pháp với weights
-
-### 4. RAG Pipeline
-
-```
-Query → Query Expansion → Hybrid Search → Context Formatting → LLM Generation
-```
+# 🚀 RAG System - Production-Ready Microservice
+
+Hệ thống RAG (Retrieval-Augmented Generation) được đóng gói thành **Production-Ready Microservice** với FastAPI, PostgreSQL (pgvector), Redis Queue và Docker.
+
+## 🌟 Highlights
+
+- ✅ **RESTful API** với FastAPI
+- ✅ **Vector Database** với PostgreSQL + pgvector
+- ✅ **Background Processing** với Redis Queue (RQ)
+- ✅ **Multi-file Upload** - Upload nhiều files cùng lúc qua multipart-form data
+- ✅ **Duplicate Detection** - SHA256 hash để tránh trùng lặp
+- ✅ **Batch Tracking** - Redis tracking tổng thời gian xử lý của batch files
+- ✅ **Docker Ready** - docker-compose để deploy một lệnh
+- ✅ **Auto Documentation** - Swagger UI tích hợp sẵn
+- ✅ **Performance Logging** - Chi tiết timing từng phase (Ingest, Chunking, Embedding, Database)
 
 ## 🚀 Quick Start
 
-**Chạy lần đầu:**
+### 1. Setup Environment
 
 ```bash
-# Bước 1: Cài đặt dependencies
-pip install -r requirements.txt
+# Copy environment template
+copy .env.example .env
 
-# Bước 2: Chạy chương trình
-python -m src.main
-
-# Bước 3: Chọn option 4 (Full Pipeline)
-# Nhập từ khóa: Hồ Chí Minh
-# Đợi xử lý...
-# Bắt đầu hỏi đáp!
+# Edit .env và thêm:
+# GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-## 📊 Performance Tips
+### 2. Start Services
 
-1. **Tăng retrieval quality:**
+```bash
+docker-compose up -d --build
+```
+
+Hệ thống sẽ khởi động:
+
+- **FastAPI** (port 8000)
+- **PostgreSQL** với pgvector (port 5432)
+- **Redis** (port 6379)
+- **RQ Worker** (background processing)
+
+### 3. Access API
+
+Mở browser: **http://localhost:8000/docs**
+
+**Xong!** 🎉 API đã sẵn sàng.
+
+## � Database Migrations
+
+Khi cần chạy migration cho database:
+
+### Cách 1: PowerShell (Windows)
+
+```powershell
+Get-Content migrations/add_file_size_and_hash.sql | docker exec -i rag_postgres psql -U rag_user -d rag_db
+```
+
+### Cách 2: Bash (Linux/Mac)
+
+```bash
+cat migrations/add_file_size_and_hash.sql | docker exec -i rag_postgres psql -U rag_user -d rag_db
+```
+
+### Cách 3: Trực tiếp trong container
+
+```bash
+docker exec -i rag_postgres psql -U rag_user -d rag_db -f /migrations/add_file_size_and_hash.sql
+```
+
+> **💡 Tip**: Migration files nằm trong thư mục `migrations/`. Chạy theo thứ tự từ cũ đến mới.
+
+## 📚 API Endpoints
+
+### 1. Upload & Process Documents
+
+**POST** `/api/v1/process`
+
+Upload một hoặc nhiều files (HTML) để xử lý:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/process" \
+  -H "Content-Type: multipart/form-data" \
+  -F "files=@file1.html" \
+  -F "files=@file2.html" \
+  -F "chunk_size=800" \
+  -F "chunk_overlap=150"
+```
+
+**Features**:
+
+- ✅ Multi-file upload
+- ✅ Content-length validation (max 50MB)
+- ✅ SHA256 duplicate detection
+- ✅ Background processing với RQ
+- ✅ Batch timing tracking
+
+**Response**:
+
+```json
+{
+  "total_files": 2,
+  "results": [
+    {
+      "filename": "file1.html",
+      "status": "processing",
+      "job_id": "job_abc123",
+      "document_id": 1,
+      "message": "File uploaded successfully"
+    }
+  ]
+}
+```
+
+### 2. Check Job Status
+
+**GET** `/api/v1/jobs/{job_id}/status`
+
+```bash
+curl http://localhost:8000/api/v1/jobs/job_abc123/status
+```
+
+### 3. Search Documents
+
+**POST** `/api/v1/search`
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Hồ Chí Minh sinh năm nao",
+    "top_k": 5
+  }'
+```
+
+### 4. RAG Chat
+
+**POST** `/api/v1/chat`
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Hồ Chí Minh sinh năm nao",
+    "top_k": 10
+  }'
+```
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Client (Browser/API)                    │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+                    ┌──────────────────┐
+                    │   FastAPI        │ ← Port 8000
+                    │   (REST API)     │
+                    └────────┬─────────┘
+                             │
+                ┌────────────┼────────────┐
+                │            │            │
+                ▼            ▼            ▼
+         ┌──────────┐  ┌─────────┐  ┌─────────┐
+         │PostgreSQL│  │  Redis  │  │ Worker  │
+         │+pgvector │  │  Queue  │  │  (RQ)   │
+         └──────────┘  └─────────┘  └─────────┘
+              │             │             │
+              │             └─────────────┘
+              │           Queue Jobs
+              │
+         ┌────┴─────┐
+         │          │
+    Documents    Chunks
+    (Metadata)   (Vectors)
+```
+
+**Data Flow**:
+
+1. Client upload file(s) → FastAPI
+2. FastAPI lưu temp file, tạo document record, queue job
+3. Worker nhận job từ Redis Queue
+4. Worker: Ingest → Chunking → Embedding → Save to PostgreSQL
+5. Worker update batch tracking trong Redis
+6. Worker cuối cùng log tổng thời gian batch
+
+## 🔧 Tech Stack
+
+- **API Framework**: FastAPI
+- **Vector DB**: PostgreSQL 17 + pgvector
+- **Queue**: Redis + RQ (Redis Queue)
+- **Embedding**: Google Gemini API
+- **File Processing**: BeautifulSoup4, MarkItDown
+- **Deployment**: Docker + Docker Compose
+
+## 📊 Performance Monitoring
+
+Hệ thống tự động log timing cho từng phase:
+
+```
+======================================================================
+✅ PROCESSING COMPLETED - Summary
+======================================================================
+📊 Document ID: 123
+📊 Total chunks created: 45
+⏱️  TOTAL TIME: 12.34s
+
+📈 Time Breakdown:
+   • Ingest:    3.21s (26.0%)
+   • Chunking:  2.10s (17.0%)
+   • Embedding: 5.89s (47.7%)
+   • Database:  1.14s (9.2%)
+======================================================================
+```
+
+**Batch Processing Log**:
+
+```
+======================================================================
+🎉 BATCH COMPLETED - All 3 file(s) processed
+======================================================================
+📊 Batch ID: batch_a1b2c3d4e5f6
+⏱️  TOTAL BATCH TIME: 45.67s
+
+📈 Total Time Breakdown (All Files):
+   • Ingest:    12.34s (27.0%)
+   • Chunking:  8.56s (18.7%)
+   • Embedding: 21.45s (47.0%)
+   • Database:  3.32s (7.3%)
+
+⚡ Average per file: 15.22s
+======================================================================
+```
+
+## 🔄 Original Script (Legacy)
+
+> **Note**: Script tương tác cũ vẫn có tại `src/main.py` (dùng Pinecone) nhưng **không khuyến nghị** sử dụng. Hãy dùng API microservice mới.
+
+## 📁 Project Structure
+
+```
+RAG/
+├── app/                           # Microservice source code
+│   ├── api/                       # API routes & schemas
+│   │   ├── routes.py              # REST endpoints
+│   │   └── schemas.py             # Pydantic models
+│   ├── database/                  # Database layer
+│   │   ├── models.py              # SQLAlchemy models
+│   │   └── connection.py          # DB connection
+│   ├── services/                  # Business logic
+│   │   ├── chunking_service.py    # Text chunking
+│   │   ├── embedding_service.py   # Vector embeddings
+│   │   ├── queue_service.py       # Redis queue
+│   │   ├── search_service.py      # Vector search
+│   │   └── rag_service.py         # RAG pipeline
+│   ├── workers/                   # Background workers
+│   │   └── process_worker.py      # Document processing
+│   ├── config.py                  # Configuration
+│   └── main.py                    # FastAPI app
+├── migrations/                    # SQL migrations
+│   └── add_file_size_and_hash.sql
+├── data/
+│   └── temp/                      # Temporary upload files
+│       └── .gitkeep
+├── docker-compose.yml             # Docker orchestration
+├── Dockerfile                     # API container
+├── requirements.txt               # Python dependencies
+├── .env.example                   # Environment template
+└── README.md
+```
+
+## ⚙️ Configuration
+
+File `.env` cần có:
+
+```env
+# API Keys
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Database
+POSTGRES_USER=rag_user
+POSTGRES_PASSWORD=rag_password
+POSTGRES_DB=rag_db
+DATABASE_URL=postgresql://rag_user:rag_password@postgres:5432/rag_db
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+```
+
+### Chunking Parameters
+
+Trong API request, bạn có thể điều chỉnh:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/process" \
+  -F "files=@file.html" \
+  -F "chunk_size=800" \      # Kích thước chunk (chars)
+  -F "chunk_overlap=150"     # Overlap giữa chunks (chars)
+```
+
+**Khuyến nghị**:
+
+- `chunk_size`: 600-1000 chars
+- `chunk_overlap`: 100-200 chars (15-20% của chunk_size)
+
+## 🐛 Troubleshooting
+
+### 1. Container không start
+
+```bash
+# Check logs
+docker-compose logs -f api
+docker-compose logs -f postgres
+docker-compose logs -f worker
+
+# Restart services
+docker-compose restart
+```
+
+### 2. Migration chưa chạy
+
+```bash
+# Chạy migration
+Get-Content migrations/add_file_size_and_hash.sql | docker exec -i rag_postgres psql -U rag_user -d rag_db
+```
+
+### 3. Worker không xử lý jobs
+
+```bash
+# Check worker logs
+docker-compose logs -f worker
+
+# Restart worker
+docker-compose restart worker
+```
+
+### 4. File upload quá 50MB
+
+```
+❌ Error: Request quá lớn. Tối đa 50MB
+```
+
+**Giải pháp**: Tăng giới hạn trong [routes.py](app/api/routes.py) hoặc split file nhỏ hơn.
+
+### 5. Duplicate file detected
+
+```json
+{
+  "status": "duplicate",
+  "message": "File already exists",
+  "document_id": 123
+}
+```
+
+**Lý do**: SHA256 hash trùng với document hiện có (cùng nội dung).
+
+## 📊 Monitoring
+
+### Check Services Health
+
+```bash
+# API health check
+curl http://localhost:8000/health
+
+# Check PostgreSQL
+docker exec rag_postgres psql -U rag_user -d rag_db -c "SELECT COUNT(*) FROM documents;"
+
+# Check Redis queue
+docker exec rag_redis redis-cli LLEN rq:queue:process
+```
+
+### View Logs
+
+```bash
+# Real-time logs
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f api
+docker-compose logs -f worker
+```
+
+### Database Queries
+
+```bash
+# Connect to PostgreSQL
+docker exec -it rag_postgres psql -U rag_user -d rag_db
+
+# Example queries
+SELECT id, title, status FROM documents;
+SELECT COUNT(*) FROM chunks;
+SELECT COUNT(*) FROM chunks WHERE document_id = 1;
+```
+
+## 🚀 Production Deployment
+
+### Environment Variables
+
+Tạo `.env.production`:
+
+```env
+GEMINI_API_KEY=prod_key_here
+POSTGRES_PASSWORD=strong_password_here
+DATABASE_URL=postgresql://user:pass@prod-db:5432/rag_db
+```
+
+### Docker Compose Production
+
+```bash
+# Build production images
+docker-compose -f docker-compose.prod.yml build
+
+# Start with production config
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Scaling Workers
+
+```bash
+# Scale to 3 workers
+docker-compose up -d --scale worker=3
+```
+
+## 🎯 Development
+
+### Local Development (Without Docker)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start PostgreSQL & Redis (Docker)
+docker-compose up -d postgres redis
+
+# Run API locally
+uvicorn app.main:app --reload --port 8000
+
+# Run worker locally
+rq worker process --url redis://localhost:6379/0
+```
+
+### Run Tests
+
+```bash
+# TODO: Add tests
+pytest tests/
+```
+
+## 📈 Performance Tips
+
+1. **Tăng retrieval quality**:
    - Tăng `top_k` lên 15-20
-   - Tăng `semantic_weight` lên 0.6-0.7
+   - Giảm `chunk_size` xuống 600
 
-2. **Giảm latency:**
-   - Giảm `top_k` xuống 5
-   - Cache chunks trong memory
+2. **Giảm processing time**:
+   - Scale workers: `docker-compose up -d --scale worker=3`
+   - Tối ưu chunk_size và overlap
 
-3. **Cải thiện chunking:**
-   - Giảm `chunk_size` xuống 500-600 (chunks nhỏ hơn, chính xác hơn)
-   - Tăng `chunk_overlap` lên 200 (giữ context tốt hơn)
+3. **Monitoring batch jobs**:
+   - Xem worker logs để track batch timing
+   - Redis batch tracking tự động cleanup sau 24h
 
-## 📞 Hỗ Trợ
+## 📞 Support
 
-Nếu gặp vấn đề, kiểm tra:
+Nếu gặp vấn đề:
 
-1. ✅ Đã cài đặt đủ thư viện
-2. ✅ Có API key hợp lệ
-3. ✅ Đã chạy Option 2 trước khi chat
-4. ✅ File markdown tồn tại trong `data/processed_data/`
-5. ✅ Có kết nối internet (để gọi API)
+1. ✅ Check logs: `docker-compose logs -f`
+2. ✅ Verify `.env` có đầy đủ API keys
+3. ✅ Đảm bảo migrations đã chạy
+4. ✅ Check services đang chạy: `docker-compose ps`
+5. ✅ Restart services: `docker-compose restart`
