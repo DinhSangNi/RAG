@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     
     # Google AI
     GEMINI_API_KEY: str = ""
-    EMBEDDING_MODEL_NAME: str = "models/text-embedding-004"
+    # Sử dụng gemini-embedding-001 với Matryoshka truncation về 768 dimensions
+    # Model tạo 3072d nhưng truncate về 768d để tiết kiệm storage
+    EMBEDDING_MODEL_NAME: str = "models/gemini-embedding-001"
     DIMENSION_OF_MODEL: int = 768
     
     # Pinecone (Legacy - optional, for backward compatibility)

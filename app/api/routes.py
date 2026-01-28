@@ -5,7 +5,6 @@ import os
 import uuid
 import hashlib
 from pathlib import Path
-import shutil
 import aiofiles
 
 from app.database import get_db
@@ -13,7 +12,6 @@ from app.database.models import Document, Chunk
 from app.api.schemas import (
     JobResponse, 
     DocumentResponse,
-    ProcessDocumentRequest,
     JobStatus,
     SearchRequest,
     SearchResult,
