@@ -47,9 +47,11 @@ class EmbeddingService:
         )
         
         if result.embeddings and len(result.embeddings) > 0:
-            embedding = list(result.embeddings[0].values)
-            # Normalize để đảm bảo chất lượng
-            return self._normalize_embedding(embedding)
+            values = result.embeddings[0].values
+            if values is not None:
+                embedding = list(values)
+                # Normalize để đảm bảo chất lượng
+                return self._normalize_embedding(embedding)
         
         raise ValueError("Failed to generate embedding")
     
@@ -72,10 +74,14 @@ class EmbeddingService:
             )
             
             if result.embeddings and len(result.embeddings) > 0:
-                embedding = list(result.embeddings[0].values)
-                # Normalize từng embedding
-                normalized = self._normalize_embedding(embedding)
-                embeddings.append(normalized)
+                values = result.embeddings[0].values
+                if values is not None:
+                    embedding = list(values)
+                    # Normalize từng embedding
+                    normalized = self._normalize_embedding(embedding)
+                    embeddings.append(normalized)
+                else:
+                    raise ValueError(f"Failed to generate embedding for text: {text[:50]}...")
             else:
                 raise ValueError(f"Failed to generate embedding for text: {text[:50]}...")
         

@@ -251,7 +251,7 @@ def process_document(
     source_type: str,
     chunk_size: int = 800,
     chunk_overlap: int = 150,
-    batch_id: str = None
+    batch_id: str | None = None
 ):
     """
     Worker function để xử lý toàn bộ: ingest + chunk + embeddings
