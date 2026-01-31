@@ -1,18 +1,75 @@
-# 🚀 RAG System - Production-Ready Microservice
+# 🚀 Hierarchical RAG System - Production-Ready Microservice
 
-Hệ thống RAG (Retrieval-Augmented Generation) được đóng gói thành **Production-Ready Microservice** với FastAPI, PostgreSQL (pgvector), Redis Queue và Docker.
+Hệ thống RAG (Retrieval-Augmented Generation) 4 tầng với kiến trúc phân cấp, được đóng gói thành **Production-Ready Microservice** với FastAPI, PostgreSQL (pgvector + ParadeDB), Redis Queue và Docker.
 
 ## 🌟 Highlights
 
+- ✅ **4-Tier Hierarchical RAG** - Kiến trúc phân tầng: Summary Documents → Documents → Parent Chunks → Child Chunks
+- ✅ **Intelligent Retrieval** - 6-step workflow với query expansion và scoped search
 - ✅ **RESTful API** với FastAPI
-- ✅ **Vector Database** với PostgreSQL + pgvector
+- ✅ **Hybrid Search** - BM25 (ParadeDB) + Semantic Search (pgvector)
 - ✅ **Background Processing** với Redis Queue (RQ)
-- ✅ **Multi-file Upload** - Upload nhiều files cùng lúc qua multipart-form data
+- ✅ **Multi-file Upload** - Upload nhiều files cùng lúc
 - ✅ **Duplicate Detection** - SHA256 hash để tránh trùng lặp
-- ✅ **Batch Tracking** - Redis tracking tổng thời gian xử lý của batch files
-- ✅ **Docker Ready** - docker-compose để deploy một lệnh
+- ✅ **Docker Ready** - Deploy một lệnh với docker-compose
 - ✅ **Auto Documentation** - Swagger UI tích hợp sẵn
-- ✅ **Performance Logging** - Chi tiết timing từng phase (Ingest, Chunking, Embedding, Database)
+
+---
+
+## 📊 Kiến trúc 4 tầng
+
+```
+summary_documents (Tóm tắt)
+    ↓
+documents (Tài liệu gốc)
+    ↓
+parent_chunks (Chunks lớn)
+    ↓
+child_chunks (Chunks nhỏ - indexed)
+```
+
+### Chi tiết từng tầng:
+
+1. **SummaryDocument**: Tóm tắt ngắn gọn của document, dùng để xác định phạm vi tìm kiếm
+2. **Document**: Tài liệu gốc, metadata và tracking
+3. **ParentChunk**: Chunks lớn (context rộng) chứa nhiều child chunks
+4. **ChildChunk**: Chunks nhỏ được indexed, dùng để tìm kiếm chi tiết
+
+---
+
+## 🔄 Workflow Hierarchical Retrieval (6 bước)
+
+### **Bước 1: Tìm kiếm Summary Documents**
+
+- Hybrid search (BM25 + Semantic) trên `summary_documents`
+- Xác định phạm vi tài liệu liên quan
+- **Fallback**: Nếu không tìm thấy hoặc score < 0.3 → tìm trực tiếp trên child chunks
+
+### **Bước 2: Kiểm tra đủ thông tin**
+
+- Format summary context và hỏi LLM: "Có đủ thông tin để trả lời không?"
+- LLM trả về: `{sufficient: true/false, reason: "..."}`
+
+### **Bước 3: Quyết định**
+
+- **Nếu đủ**: Dùng summary để trả lời → Kết thúc
+- **Nếu không đủ**: Tiến hành query expansion
+
+### **Bước 4: Query Expansion**
+
+- Trích xuất: entities, aliases, keywords
+- Tạo query variants (biến thể câu hỏi)
+
+### **Bước 5: Scoped Search trên Child Chunks**
+
+- Tìm kiếm **chỉ trong phạm vi** child chunks thuộc summary docs đã tìm
+- Dùng từng query variant
+- Áp dụng RRF (Reciprocal Rank Fusion) để tổng hợp kết quả
+
+### **Bước 6: Tạo câu trả lời**
+
+- Gửi top chunks + câu hỏi cho LLM
+- LLM tạo câu trả lời cuối cùng
 
 ## 🚀 Quick Start
 
@@ -35,7 +92,7 @@ docker-compose up -d --build
 Hệ thống sẽ khởi động:
 
 - **FastAPI** (port 8000)
-- **PostgreSQL** với pgvector (port 5432)
+- **PostgreSQL** với pgvector + ParadeDB (port 5432)
 - **Redis** (port 6379)
 - **RQ Worker** (background processing)
 
@@ -43,431 +100,325 @@ Hệ thống sẽ khởi động:
 
 Mở browser: **http://localhost:8000/docs**
 
-**Xong!** 🎉 API đã sẵn sàng.
+---
 
-## � Database Migrations
+## 📋 Database Migrations
 
-Khi cần chạy migration cho database:
+Chạy migrations để tạo schema 4 tầng:
 
-### Cách 1: PowerShell (Windows)
+### Windows (PowerShell):
 
 ```powershell
-Get-Content migrations/add_file_size_and_hash.sql | docker exec -i rag_postgres psql -U rag_user -d rag_db
+.\run_migration.ps1
 ```
 
-### Cách 2: Bash (Linux/Mac)
+### Linux/Mac:
 
 ```bash
-cat migrations/add_file_size_and_hash.sql | docker exec -i rag_postgres psql -U rag_user -d rag_db
+./run_migration.sh
 ```
 
-### Cách 3: Trực tiếp trong container
+### Manual:
 
 ```bash
-docker exec -i rag_postgres psql -U rag_user -d rag_db -f /migrations/add_file_size_and_hash.sql
+psql -h 127.0.0.1 -p 5433 -U rag_user -d rag_db -f migrations/create_bm25_index.sql
+psql -h 127.0.0.1 -p 5433 -U rag_user -d rag_db -f migrations/update_embedding_dimension_768.sql
 ```
 
-> **💡 Tip**: Migration files nằm trong thư mục `migrations/`. Chạy theo thứ tự từ cũ đến mới.
+---
 
-## 📚 API Endpoints
+## 📤 Upload Workflow
 
-### 1. Upload & Process Documents
+### **Bước 1: Upload Summary Document** (Bắt buộc trước)
 
-**POST** `/api/v1/process`
+```bash
+curl -X POST "http://localhost:8000/api/v1/process-summary" \
+  -F "files=@summary.html"
+```
 
-Upload một hoặc nhiều files (HTML) để xử lý:
+Response:
+
+```json
+{
+  "total_files": 1,
+  "results": [
+    {
+      "filename": "summary.html",
+      "status": "processing",
+      "job_id": "summary_abc123",
+      "document_id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+  ]
+}
+```
+
+**Lưu lại `document_id` (đây là `summary_id` cho bước sau)**
+
+### **Bước 2: Upload Regular Documents**
 
 ```bash
 curl -X POST "http://localhost:8000/api/v1/process" \
-  -H "Content-Type: multipart/form-data" \
-  -F "files=@file1.html" \
-  -F "files=@file2.html" \
+  -F "summary_id=550e8400-e29b-41d4-a716-446655440000" \
+  -F "files=@document1.html" \
+  -F "files=@document2.html" \
   -F "chunk_size=800" \
   -F "chunk_overlap=150"
 ```
 
-**Features**:
-
-- ✅ Multi-file upload
-- ✅ Content-length validation (max 50MB)
-- ✅ SHA256 duplicate detection
-- ✅ Background processing với RQ
-- ✅ Batch timing tracking
-
-**Response**:
+Response:
 
 ```json
 {
   "total_files": 2,
   "results": [
     {
-      "filename": "file1.html",
+      "filename": "document1.html",
       "status": "processing",
-      "job_id": "job_abc123",
-      "document_id": 1,
-      "message": "File uploaded successfully"
+      "job_id": "process_xyz789",
+      "document_id": "660e8400-e29b-41d4-a716-446655440001"
     }
   ]
 }
 ```
 
-### 2. Check Job Status
+---
 
-**GET** `/api/v1/jobs/{job_id}/status`
+## 🔍 API Endpoints
 
-```bash
-curl http://localhost:8000/api/v1/jobs/job_abc123/status
-```
+### Upload Endpoints
 
-### 3. Search Documents
+| Endpoint                              | Method | Mô tả                    | Params                                                      |
+| ------------------------------------- | ------ | ------------------------ | ----------------------------------------------------------- |
+| `/api/v1/process-summary`             | POST   | Upload summary documents | files (multipart)                                           |
+| `/api/v1/update-summary/{summary_id}` | POST   | Update summary document  | summary_id (path), file (multipart)                         |
+| `/api/v1/process`                     | POST   | Upload regular documents | **summary_id** (required), files, chunk_size, chunk_overlap |
 
-**POST** `/api/v1/search`
+### Query Endpoints
 
-```bash
-curl -X POST "http://localhost:8000/api/v1/search" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Hồ Chí Minh sinh năm nao",
-    "top_k": 5
-  }'
-```
+| Endpoint       | Method | Mô tả                               |
+| -------------- | ------ | ----------------------------------- |
+| `/api/v1/chat` | POST   | RAG chat với hierarchical retrieval |
 
-### 4. RAG Chat
+### Management Endpoints
 
-**POST** `/api/v1/chat`
+| Endpoint                  | Method | Mô tả               |
+| ------------------------- | ------ | ------------------- |
+| `/api/v1/status/{job_id}` | GET    | Kiểm tra job status |
+| `/api/v1/documents`       | GET    | List documents      |
+| `/api/v1/documents/{id}`  | GET    | Get document detail |
+| `/api/v1/documents/{id}`  | DELETE | Delete document     |
+
+---
+
+## 💬 RAG Chat Example
 
 ```bash
 curl -X POST "http://localhost:8000/api/v1/chat" \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "Hồ Chí Minh sinh năm nao",
-    "top_k": 10
+    "question": "Hồ Chí Minh sinh năm nào?",
+    "document_ids": null,
+    "verbose": true
   }'
 ```
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Client (Browser/API)                    │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-                               ▼
-                    ┌──────────────────┐
-                    │   FastAPI        │ ← Port 8000
-                    │   (REST API)     │
-                    └────────┬─────────┘
-                             │
-                ┌────────────┼────────────┐
-                │            │            │
-                ▼            ▼            ▼
-         ┌──────────┐  ┌─────────┐  ┌─────────┐
-         │PostgreSQL│  │  Redis  │  │ Worker  │
-         │+pgvector │  │  Queue  │  │  (RQ)   │
-         └──────────┘  └─────────┘  └─────────┘
-              │             │             │
-              │             └─────────────┘
-              │           Queue Jobs
-              │
-         ┌────┴─────┐
-         │          │
-    Documents    Chunks
-    (Metadata)   (Vectors)
-```
-
-**Data Flow**:
-
-1. Client upload file(s) → FastAPI
-2. FastAPI lưu temp file, tạo document record, queue job
-3. Worker nhận job từ Redis Queue
-4. Worker: Ingest → Chunking → Embedding → Save to PostgreSQL
-5. Worker update batch tracking trong Redis
-6. Worker cuối cùng log tổng thời gian batch
-
-## 🔧 Tech Stack
-
-- **API Framework**: FastAPI
-- **Vector DB**: PostgreSQL 17 + pgvector
-- **Queue**: Redis + RQ (Redis Queue)
-- **Embedding**: Google Gemini API
-- **File Processing**: BeautifulSoup4, MarkItDown
-- **Deployment**: Docker + Docker Compose
-
-## 📊 Performance Monitoring
-
-Hệ thống tự động log timing cho từng phase:
-
-```
-======================================================================
-✅ PROCESSING COMPLETED - Summary
-======================================================================
-📊 Document ID: 123
-📊 Total chunks created: 45
-⏱️  TOTAL TIME: 12.34s
-
-📈 Time Breakdown:
-   • Ingest:    3.21s (26.0%)
-   • Chunking:  2.10s (17.0%)
-   • Embedding: 5.89s (47.7%)
-   • Database:  1.14s (9.2%)
-======================================================================
-```
-
-**Batch Processing Log**:
-
-```
-======================================================================
-🎉 BATCH COMPLETED - All 3 file(s) processed
-======================================================================
-📊 Batch ID: batch_a1b2c3d4e5f6
-⏱️  TOTAL BATCH TIME: 45.67s
-
-📈 Total Time Breakdown (All Files):
-   • Ingest:    12.34s (27.0%)
-   • Chunking:  8.56s (18.7%)
-   • Embedding: 21.45s (47.0%)
-   • Database:  3.32s (7.3%)
-
-⚡ Average per file: 15.22s
-======================================================================
-```
-
-## 🔄 Original Script (Legacy)
-
-> **Note**: Script tương tác cũ vẫn có tại `src/main.py` (dùng Pinecone) nhưng **không khuyến nghị** sử dụng. Hãy dùng API microservice mới.
-
-## 📁 Project Structure
-
-```
-RAG/
-├── app/                           # Microservice source code
-│   ├── api/                       # API routes & schemas
-│   │   ├── routes.py              # REST endpoints
-│   │   └── schemas.py             # Pydantic models
-│   ├── database/                  # Database layer
-│   │   ├── models.py              # SQLAlchemy models
-│   │   └── connection.py          # DB connection
-│   ├── services/                  # Business logic
-│   │   ├── chunking_service.py    # Text chunking
-│   │   ├── embedding_service.py   # Vector embeddings
-│   │   ├── queue_service.py       # Redis queue
-│   │   ├── search_service.py      # Vector search
-│   │   └── rag_service.py         # RAG pipeline
-│   ├── workers/                   # Background workers
-│   │   └── process_worker.py      # Document processing
-│   ├── config.py                  # Configuration
-│   └── main.py                    # FastAPI app
-├── migrations/                    # SQL migrations
-│   └── add_file_size_and_hash.sql
-├── data/
-│   └── temp/                      # Temporary upload files
-│       └── .gitkeep
-├── docker-compose.yml             # Docker orchestration
-├── Dockerfile                     # API container
-├── requirements.txt               # Python dependencies
-├── .env.example                   # Environment template
-└── README.md
-```
-
-## ⚙️ Configuration
-
-File `.env` cần có:
-
-```env
-# API Keys
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# Database
-POSTGRES_USER=rag_user
-POSTGRES_PASSWORD=rag_password
-POSTGRES_DB=rag_db
-DATABASE_URL=postgresql://rag_user:rag_password@postgres:5432/rag_db
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_DB=0
-```
-
-### Chunking Parameters
-
-Trong API request, bạn có thể điều chỉnh:
-
-```bash
-curl -X POST "http://localhost:8000/api/v1/process" \
-  -F "files=@file.html" \
-  -F "chunk_size=800" \      # Kích thước chunk (chars)
-  -F "chunk_overlap=150"     # Overlap giữa chunks (chars)
-```
-
-**Khuyến nghị**:
-
-- `chunk_size`: 600-1000 chars
-- `chunk_overlap`: 100-200 chars (15-20% của chunk_size)
-
-## 🐛 Troubleshooting
-
-### 1. Container không start
-
-```bash
-# Check logs
-docker-compose logs -f api
-docker-compose logs -f postgres
-docker-compose logs -f worker
-
-# Restart services
-docker-compose restart
-```
-
-### 2. Migration chưa chạy
-
-```bash
-# Chạy migration
-Get-Content migrations/add_file_size_and_hash.sql | docker exec -i rag_postgres psql -U rag_user -d rag_db
-```
-
-### 3. Worker không xử lý jobs
-
-```bash
-# Check worker logs
-docker-compose logs -f worker
-
-# Restart worker
-docker-compose restart worker
-```
-
-### 4. File upload quá 50MB
-
-```
-❌ Error: Request quá lớn. Tối đa 50MB
-```
-
-**Giải pháp**: Tăng giới hạn trong [routes.py](app/api/routes.py) hoặc split file nhỏ hơn.
-
-### 5. Duplicate file detected
+Response:
 
 ```json
 {
-  "status": "duplicate",
-  "message": "File already exists",
-  "document_id": 123
+  "question": "Hồ Chí Minh sinh năm nào?",
+  "answer": "Hồ Chí Minh sinh năm 1890 tại làng Kim Liên, Nghệ An.",
+  "metadata": {
+    "retrieval_method": "hierarchical",
+    "summary_docs_found": 2,
+    "sufficient_from_summaries": false,
+    "query_variants": ["Năm sinh Hồ Chí Minh", "Bác Hồ sinh năm nào"],
+    "child_chunks_retrieved": 5,
+    "total_time_ms": 1234
+  }
 }
 ```
 
-**Lý do**: SHA256 hash trùng với document hiện có (cùng nội dung).
+---
 
-## 📊 Monitoring
+## 🗂️ Project Structure
 
-### Check Services Health
-
-```bash
-# API health check
-curl http://localhost:8000/health
-
-# Check PostgreSQL
-docker exec rag_postgres psql -U rag_user -d rag_db -c "SELECT COUNT(*) FROM documents;"
-
-# Check Redis queue
-docker exec rag_redis redis-cli LLEN rq:queue:process
+```
+RAG/
+├── app/
+│   ├── api/
+│   │   ├── routes.py          # API endpoints
+│   │   └── schemas.py         # Pydantic models
+│   ├── database/
+│   │   ├── models.py          # SQLAlchemy models (4-tier)
+│   │   └── connection.py      # DB connection
+│   ├── services/
+│   │   ├── chunking_service.py    # Chunking logic
+│   │   ├── embedding_service.py   # Gemini embeddings
+│   │   ├── search_service.py      # Hybrid search (BM25 + Semantic)
+│   │   ├── rag_service.py         # Hierarchical RAG workflow
+│   │   └── queue_service.py       # Redis queue
+│   └── workers/
+│       └── process_worker.py      # Background processing
+├── migrations/
+│   ├── create_bm25_index.sql              # ParadeDB BM25 index
+│   └── update_embedding_dimension_768.sql # Update to 768-dim embeddings
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
 ```
 
-### View Logs
+---
 
-```bash
-# Real-time logs
-docker-compose logs -f
+## 📊 Database Schema
 
-# Specific service
-docker-compose logs -f api
-docker-compose logs -f worker
+### summary_documents
+
+```sql
+- id (UUID, PK)
+- file_path (TEXT)
+- file_name (TEXT)
+- content (TEXT)
+- embedding (VECTOR(768))
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
 ```
 
-### Database Queries
+### documents
 
-```bash
-# Connect to PostgreSQL
-docker exec -it rag_postgres psql -U rag_user -d rag_db
-
-# Example queries
-SELECT id, title, status FROM documents;
-SELECT COUNT(*) FROM chunks;
-SELECT COUNT(*) FROM chunks WHERE document_id = 1;
+```sql
+- id (UUID, PK)
+- summary_id (UUID, FK → summary_documents)
+- file_path (TEXT)
+- file_name (TEXT)
+- source_type (TEXT)
+- status (TEXT)
+- file_size (INTEGER)
+- file_hash (TEXT, UNIQUE)
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
 ```
 
-## 🚀 Production Deployment
+### parent_chunks
 
-### Environment Variables
+```sql
+- id (SERIAL, PK)
+- document_id (UUID, FK → documents)
+- summary_id (UUID, FK → summary_documents)
+- content (TEXT)
+- chunk_index (INTEGER)
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
+```
 
-Tạo `.env.production`:
+### child_chunks
+
+```sql
+- id (SERIAL, PK)
+- document_id (UUID, FK → documents)
+- parent_id (INTEGER, FK → parent_chunks)
+- summary_id (UUID, FK → summary_documents)
+- content (TEXT)
+- embedding (VECTOR(768))
+- chunk_index (INTEGER)
+- section_id (INTEGER)
+- h1, h2, h3 (TEXT)
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
+```
+
+**Indexes:**
+
+- ParadeDB BM25 index trên `child_chunks.content`
+- pgvector HNSW index trên `child_chunks.embedding`
+- pgvector HNSW index trên `summary_documents.embedding`
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables (.env)
 
 ```env
-GEMINI_API_KEY=prod_key_here
-POSTGRES_PASSWORD=strong_password_here
-DATABASE_URL=postgresql://user:pass@prod-db:5432/rag_db
+# Gemini API
+GEMINI_API_KEY=your_api_key_here
+
+# Database
+DATABASE_URL=postgresql://rag_user:rag_password@db:5432/rag_db
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Chunking
+DEFAULT_CHUNK_SIZE=800
+DEFAULT_CHUNK_OVERLAP=150
+
+# Embedding
+EMBEDDING_MODEL=models/text-embedding-004
+EMBEDDING_DIMENSION=768
 ```
 
-### Docker Compose Production
+---
 
-```bash
-# Build production images
-docker-compose -f docker-compose.prod.yml build
+## 🎯 Key Features
 
-# Start with production config
-docker-compose -f docker-compose.prod.yml up -d
-```
+### 1. **Hierarchical Retrieval**
 
-### Scaling Workers
+- Tìm kiếm thông minh qua nhiều tầng
+- Giảm nhiễu thông tin
+- Tăng độ chính xác
 
-```bash
-# Scale to 3 workers
-docker-compose up -d --scale worker=3
-```
+### 2. **Scoped Search**
 
-## 🎯 Development
+- Child chunks được giới hạn trong phạm vi summary documents
+- Không tìm kiếm trên toàn bộ corpus → nhanh hơn
 
-### Local Development (Without Docker)
+### 3. **Query Expansion**
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+- LLM tự động tạo query variants
+- Trích xuất entities, aliases
+- Tăng recall rate
 
-# Start PostgreSQL & Redis (Docker)
-docker-compose up -d postgres redis
+### 4. **Hybrid Search**
 
-# Run API locally
-uvicorn app.main:app --reload --port 8000
+- **BM25** (ParadeDB): Keyword matching
+- **Semantic** (pgvector): Cosine similarity
+- **RRF**: Fusion algorithm tổng hợp kết quả
 
-# Run worker locally
-rq worker process --url redis://localhost:6379/0
-```
+### 5. **Background Processing**
 
-### Run Tests
+- Upload files → trả về job_id ngay lập tức
+- Worker xử lý background (ingest → chunk → embed → save)
+- Redis tracking batch progress
 
-```bash
-# TODO: Add tests
-pytest tests/
-```
+---
 
-## 📈 Performance Tips
+## 📝 Notes
 
-1. **Tăng retrieval quality**:
-   - Tăng `top_k` lên 15-20
-   - Giảm `chunk_size` xuống 600
+### Upload Order
 
-2. **Giảm processing time**:
-   - Scale workers: `docker-compose up -d --scale worker=3`
-   - Tối ưu chunk_size và overlap
+⚠️ **Bắt buộc**: Upload summary documents trước, sau đó mới upload regular documents với `summary_id`
 
-3. **Monitoring batch jobs**:
-   - Xem worker logs để track batch timing
-   - Redis batch tracking tự động cleanup sau 24h
+### Query Variants
 
-## 📞 Support
+LLM tự động tạo biến thể câu hỏi để tăng khả năng tìm kiếm
 
-Nếu gặp vấn đề:
+### Fallback Mechanism
 
-1. ✅ Check logs: `docker-compose logs -f`
-2. ✅ Verify `.env` có đầy đủ API keys
-3. ✅ Đảm bảo migrations đã chạy
-4. ✅ Check services đang chạy: `docker-compose ps`
-5. ✅ Restart services: `docker-compose restart`
+Nếu không tìm thấy summary docs hoặc score thấp → tìm kiếm trực tiếp trên toàn bộ child chunks
+
+---
+
+## 🚀 Production Tips
+
+1. **Monitoring**: Thêm Prometheus + Grafana để monitor performance
+2. **Caching**: Redis cache cho frequent queries
+3. **Load Balancing**: Multiple workers cho heavy loads
+4. **Backup**: Định kỳ backup PostgreSQL database
+5. **Rate Limiting**: Thêm rate limiter cho API endpoints
+
+---
+
+## 📄 License
+
+MIT License

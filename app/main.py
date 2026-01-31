@@ -1,20 +1,25 @@
+"""
+FastAPI Application Entry Point
+RAG Service API with PostgreSQL, pgvector and Redis Queue
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.config import settings
 from app.database.connection import engine, Base
 
-# Tạo tables
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
-# Tạo FastAPI app
+# Create FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="RAG Service API với PostgreSQL, pgvector và Redis Queue"
 )
 
-# CORS middleware
+# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,12 +28,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routes
+# Include API routes
 app.include_router(router)
 
 
 @app.get("/")
 async def root():
+    """
+    Root endpoint returning API information
+    """
     return {
         "message": "RAG Service API",
         "version": settings.APP_VERSION,
@@ -38,6 +46,9 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """
+    Health check endpoint
+    """
     return {
         "status": "healthy",
         "service": settings.APP_NAME

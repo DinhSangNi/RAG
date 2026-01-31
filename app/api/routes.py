@@ -1,6 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Request
+"""
+API Routes for RAG Service
+Handles document processing, search, and chat endpoints
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Request, Form
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import os
 import uuid
 import hashlib
@@ -8,9 +13,9 @@ from pathlib import Path
 import aiofiles
 
 from app.database import get_db
-from app.database.models import Document, Chunk
+from app.database.models import Document, ChildChunk, SummaryDocument
 from app.api.schemas import (
-    JobResponse, 
+    JobResponse,
     DocumentResponse,
     JobStatus,
     SearchRequest,
@@ -19,7 +24,8 @@ from app.api.schemas import (
     ChatRequest,
     ChatResponse,
     FileUploadResult,
-    MultiFileUploadResponse
+    MultiFileUploadResponse,
+    UpdateSummaryResponse
 )
 from app.services.queue_service import queue_process_job, get_job_status
 from app.services.search_service import get_search_service
@@ -29,21 +35,29 @@ router = APIRouter(prefix="/api/v1", tags=["documents"])
 
 
 def normalize_file_path(file_path: str) -> str:
-    # Nếu là đường dẫn Windows (có dấu \), chuyển về dấu / của Linux
+    """
+    Normalize file path for cross-platform compatibility
+
+    Args:
+        file_path: Input file path
+
+    Returns:
+        Normalized file path
+    """
+    # Convert Windows backslashes to forward slashes
     file_path = file_path.replace("\\", "/")
 
-    # Nếu file_path đã là đường dẫn tuyệt đối bắt đầu bằng /app, giữ nguyên
+    # If already absolute path starting with /app, keep as is
     if file_path.startswith("/app/"):
         return file_path
-    
-    # Nếu chạy trong Docker, đảm bảo nó trỏ vào folder /app/data
+
+    # If running in Docker, ensure it points to /app/data folder
     if os.path.exists('/app'):
-        # Nếu user truyền "data/file.pdf", ta không muốn thành "/app/data/file.pdf" bị lặp 
-        # nên ta làm sạch nó
+        # Clean the path to avoid duplication
         clean_path = file_path.lstrip('/')
         if not clean_path.startswith('app/'):
             return os.path.join("/app", clean_path)
-            
+
     return file_path
 
 
@@ -106,9 +120,10 @@ def check_duplicate_document(db: Session, file_path: str, file_size: int, conten
 @router.post("/process", response_model=MultiFileUploadResponse)
 async def process_document(
     request: Request,
+    summary_id: Optional[str] = Form(None),
     files: List[UploadFile] = File(...),
-    chunk_size: int = 800,
-    chunk_overlap: int = 150,
+    chunk_size: int = Form(800),
+    chunk_overlap: int = Form(150),
     db: Session = Depends(get_db)
 ):
     """
@@ -119,7 +134,22 @@ async def process_document(
     - Hash content và kiểm tra duplicate
     - Tạo document record
     - Queue job để xử lý: clean → markdown → chunk → embeddings → save
+    
+    Args:
+        summary_id: UUID của summary document (tùy chọn) - child chunks sẽ được gắn với summary này nếu có
     """
+    # Normalize summary_id: convert "null", "", "undefined" thành None
+    if summary_id and summary_id.lower() in ["null", "undefined", "none", ""]:
+        summary_id = None
+    
+    # Validate summary_id tồn tại (nếu được cung cấp)
+    if summary_id:
+        summary_doc = db.query(SummaryDocument).filter(SummaryDocument.id == summary_id).first()
+        if not summary_doc:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Summary document không tồn tại: {summary_id}"
+            )
     # Kiểm tra content-length header
     content_length = request.headers.get('content-length')
     if content_length:
@@ -215,6 +245,11 @@ async def process_document(
             document = existing_document
         else:
             # Tạo document record mới
+            # Tạo metadata với hoặc không có summary_id
+            metadata = {"original_filename": file_name}
+            if summary_id:
+                metadata["summary_id"] = summary_id
+            
             document = Document(
                 file_path=normalized_path,
                 file_name=file_name,
@@ -222,7 +257,7 @@ async def process_document(
                 status="pending",
                 file_size=file_size,
                 content_hash=content_hash,
-                meta_data={"original_filename": file_name}
+                meta_data=metadata
             )
             
             db.add(document)
@@ -244,7 +279,8 @@ async def process_document(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             batch_id=batch_id,
-            total_files=len(files)
+            total_files=len(files),
+            summary_id=summary_id
         )
         
         results.append(FileUploadResult(
@@ -258,6 +294,361 @@ async def process_document(
     return MultiFileUploadResponse(
         total_files=len(files),
         results=results
+    )
+
+
+@router.post("/process-summary", response_model=MultiFileUploadResponse)
+async def process_summary_document(
+    request: Request,
+    files: List[UploadFile] = File(...),
+    document_ids: List[str] = Form([]),
+    db: Session = Depends(get_db)
+):
+    """
+    Xử lý summary documents: ingest + embedding (không chunking)
+    - Nhận file(s) qua multipart-form data
+    - Nhận document_ids (list of UUIDs) để link summary với documents cụ thể
+    - Kiểm tra content-length <= 50MB
+    - Stream files vào thư mục temp
+    - Hash content và kiểm tra duplicate
+    - Tạo document record
+    - Queue job để xử lý: clean → markdown → embedding → save vào summary_documents table
+    - Update child chunks của documents với summary_id mới tạo
+    
+    Khác với /process: File summary được lưu vào summary_documents table thay vì chunking
+    """
+    # Kiểm tra content-length header
+    content_length = request.headers.get('content-length')
+    if content_length:
+        content_length_bytes = int(content_length)
+        max_size = 50 * 1024 * 1024  # 50MB
+        if content_length_bytes > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Request quá lớn. Tối đa 50MB, nhận được {content_length_bytes / 1024 / 1024:.2f}MB"
+            )
+    
+    if not files:
+        raise HTTPException(status_code=400, detail="Không có file nào được upload")
+    
+    # Parse document_ids if provided
+    target_doc_ids = None
+    if document_ids and len(document_ids) > 0:
+        # Handle both formats:
+        # 1. Multiple values: ['uuid1', 'uuid2', 'uuid3']
+        # 2. Single comma-separated value: ['uuid1,uuid2,uuid3']
+        if len(document_ids) == 1 and ',' in document_ids[0]:
+            # Split comma-separated string
+            target_doc_ids = [doc_id.strip() for doc_id in document_ids[0].split(',') if doc_id.strip()]
+        else:
+            # Already a proper list
+            target_doc_ids = [doc_id.strip() for doc_id in document_ids if doc_id.strip()]
+        
+        if target_doc_ids:
+            # Validate document IDs exist in database
+            for doc_id in target_doc_ids:
+                doc_exists = db.query(Document).filter(Document.id == doc_id).first()
+                if not doc_exists:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Document ID không tồn tại: {doc_id}"
+                    )
+            print(f"📋 Linking summary to {len(target_doc_ids)} documents: {target_doc_ids}")
+    
+    # Tạo batch_id để track tất cả files trong request này
+    batch_id = f"batch_{uuid.uuid4().hex[:12]}"
+    
+    # Đảm bảo thư mục temp tồn tại
+    temp_dir = ensure_temp_directory()
+    
+    # Danh sách kết quả cho từng file
+    results = []
+    
+    for upload_file in files:
+        # Validate file name
+        if not upload_file.filename:
+            continue
+            
+        # Tạo unique filename với UUID để tránh conflict
+        file_extension = Path(upload_file.filename).suffix
+        unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+        temp_file_path = temp_dir / unique_filename
+        
+        # Stream file vào thư mục temp
+        try:
+            async with aiofiles.open(temp_file_path, 'wb') as out_file:
+                while content := await upload_file.read(4096):
+                    await out_file.write(content)
+        except Exception as e:
+            # Xóa file nếu có lỗi
+            if temp_file_path.exists():
+                temp_file_path.unlink()
+            raise HTTPException(status_code=500, detail=f"Lỗi khi lưu file: {str(e)}")
+        
+        # Reset file pointer về đầu để hash
+        await upload_file.seek(0)
+        
+        # Tính file_size và content_hash
+        file_size = os.path.getsize(temp_file_path)
+        content_hash = calculate_file_hash(str(temp_file_path))
+        file_name = upload_file.filename
+        
+        # Normalize file path cho Docker/local compatibility
+        normalized_path = normalize_file_path(str(temp_file_path))
+        
+        # Kiểm tra duplicate dựa trên file_size và content_hash
+        duplicate_doc = check_duplicate_document(db, normalized_path, file_size, content_hash)
+        
+        if duplicate_doc:
+            # File này đã có trong DB với nội dung giống hệt (khác path)
+            # Xóa file temp
+            if temp_file_path.exists():
+                temp_file_path.unlink()
+            
+            results.append(FileUploadResult(
+                filename=file_name,
+                status="duplicate",
+                message=f"File đã tồn tại trong hệ thống (document_id: {duplicate_doc.id})",
+                document_id=str(duplicate_doc.id)
+            ))
+            continue
+        
+        # Đọc content để kiểm tra duplicate trong SummaryDocument
+        try:
+            with open(temp_file_path, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+        except UnicodeDecodeError:
+            # Nếu không phải text file, skip kiểm tra summary duplicate
+            file_content = None
+        
+        # Kiểm tra duplicate trong SummaryDocument nếu có thể đọc content
+        if file_content is not None:
+            # Hash content để so sánh
+            import hashlib
+            content_hash_for_summary = hashlib.sha256(file_content.encode('utf-8')).hexdigest()
+            
+            # Tìm summary documents có cùng content hash
+            existing_summary = db.query(SummaryDocument).filter(
+                SummaryDocument.content_hash == content_hash_for_summary
+            ).first()
+            
+            if existing_summary:
+                # Đã có summary với content giống hệt
+                # Xóa file temp
+                if temp_file_path.exists():
+                    temp_file_path.unlink()
+                
+                results.append(FileUploadResult(
+                    filename=file_name,
+                    status="duplicate",
+                    message=f"Summary document đã tồn tại trong hệ thống (summary_id: {existing_summary.id})",
+                    document_id=None  # SummaryDocument không còn 1-1 với Document
+                ))
+                continue
+        
+        # Tạo summary document record mới (placeholder, sẽ được update bởi worker)
+        summary_doc = SummaryDocument(
+            summary_content="Processing...",  # Placeholder
+            status="pending",
+            meta_data={
+                "file_path": normalized_path,
+                "file_name": file_name,
+                "original_filename": file_name
+            }
+        )
+        db.add(summary_doc)
+        db.commit()
+        db.refresh(summary_doc)
+        print(f"✨ Created new summary: {summary_doc.id}")
+        
+        # Tạo job ID
+        job_id = f"process_{uuid.uuid4().hex[:8]}"
+        
+        # Queue job để xử lý summary
+        queue_process_job(
+            job_id=job_id,
+            document_id=str(summary_doc.id),  # Dùng summary_id làm document_id
+            file_path=normalized_path,
+            source_type="upload",
+            chunk_size=800,  # Not used for summary
+            chunk_overlap=150,  # Not used for summary
+            batch_id=batch_id,
+            total_files=len(files),
+            is_summary=True,
+            summary_id=str(summary_doc.id),  # Pass summary_id to update existing record
+            target_document_ids=target_doc_ids
+        )
+        
+        results.append(FileUploadResult(
+            filename=file_name,
+            status="processing",
+            job_id=job_id,
+            document_id=str(summary_doc.id),
+            message="Summary document đang được xử lý (ingest + embedding)"
+        ))
+    
+    return MultiFileUploadResponse(
+        total_files=len(files),
+        results=results
+    )
+
+
+@router.post("/update-summary/{summary_id}", response_model=UpdateSummaryResponse)
+async def update_summary_document(
+    summary_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    document_ids: List[str] = Form([]),
+    db: Session = Depends(get_db)
+):
+    """
+    Cập nhật summary document với content mới
+    - Nhận document_ids (list of UUIDs) để link summary với documents cụ thể
+    - Check duplicate với content_hash
+    - Nếu content không thay đổi → return unchanged
+    - Nếu content thay đổi → queue job để re-process (embedding + save)
+    - Nếu content trùng với summary khác → return duplicate
+    - Update child chunks của documents với summary_id
+    """
+    # Kiểm tra summary document tồn tại
+    summary = db.query(SummaryDocument).filter(SummaryDocument.id == summary_id).first()
+    if not summary:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Summary document không tồn tại: {summary_id}"
+        )
+    
+    # Đảm bảo thư mục temp tồn tại
+    temp_dir = ensure_temp_directory()
+    
+    # Kiểm tra file có tên không
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="File không có tên")
+    
+    # Tạo unique filename với UUID để tránh conflict
+    file_extension = Path(file.filename).suffix
+    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    temp_file_path = temp_dir / unique_filename
+    
+    # Stream file vào thư mục temp
+    try:
+        async with aiofiles.open(temp_file_path, 'wb') as out_file:
+            while content := await file.read(4096):
+                await out_file.write(content)
+    except Exception as e:
+        # Xóa file nếu có lỗi
+        if temp_file_path.exists():
+            temp_file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu file: {str(e)}")
+    
+    # Đọc content để check duplicate
+    try:
+        with open(temp_file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+    except UnicodeDecodeError:
+        # Xóa file temp
+        if temp_file_path.exists():
+            temp_file_path.unlink()
+        raise HTTPException(status_code=400, detail="File không phải text file")
+    
+    # Tính content hash
+    import hashlib
+    new_content_hash = hashlib.sha256(file_content.encode('utf-8')).hexdigest()
+    
+    # Check xem content có thay đổi không
+    current_hash = getattr(summary, 'content_hash', None)
+    if current_hash and str(current_hash) == str(new_content_hash):
+        # Content không thay đổi
+        if temp_file_path.exists():
+            temp_file_path.unlink()
+        
+        return UpdateSummaryResponse(
+            status="unchanged",
+            summary_id=str(summary.id),
+            document_id=None,  # SummaryDocument không còn 1-1 với Document
+            message="Content không thay đổi, không cần update"
+        )
+    
+    # Check duplicate với summary khác
+    duplicate_summary = db.query(SummaryDocument).filter(
+        SummaryDocument.content_hash == new_content_hash,
+        SummaryDocument.id != summary_id
+    ).first()
+    
+    if duplicate_summary:
+        # Content trùng với summary khác
+        if temp_file_path.exists():
+            temp_file_path.unlink()
+        
+        return UpdateSummaryResponse(
+            status="duplicate",
+            summary_id=str(summary.id),
+            document_id=None,  # SummaryDocument không còn 1-1 với Document
+            message=f"Content trùng với summary khác (summary_id: {duplicate_summary.id})"
+        )
+    
+    # Parse document_ids if provided
+    target_doc_ids = None
+    if document_ids and len(document_ids) > 0:
+        # Handle both formats:
+        # 1. Multiple values: ['uuid1', 'uuid2', 'uuid3']
+        # 2. Single comma-separated value: ['uuid1,uuid2,uuid3']
+        if len(document_ids) == 1 and ',' in document_ids[0]:
+            # Split comma-separated string
+            target_doc_ids = [doc_id.strip() for doc_id in document_ids[0].split(',') if doc_id.strip()]
+        else:
+            # Already a proper list
+            target_doc_ids = [doc_id.strip() for doc_id in document_ids if doc_id.strip()]
+        
+        if target_doc_ids:
+            # Validate document IDs exist in database
+            for doc_id in target_doc_ids:
+                doc_exists = db.query(Document).filter(Document.id == doc_id).first()
+                if not doc_exists:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Document ID không tồn tại: {doc_id}"
+                    )
+            print(f"📋 Re-linking summary to {len(target_doc_ids)} documents: {target_doc_ids}")
+    
+    # Content đã thay đổi và không trùng → queue job để update summary
+    file_size = os.path.getsize(temp_file_path)
+    file_hash = calculate_file_hash(str(temp_file_path))
+    normalized_path = normalize_file_path(str(temp_file_path))
+    
+    # Update summary metadata
+    current_meta = summary.meta_data or {}
+    current_meta['file_path'] = normalized_path
+    current_meta['file_name'] = file.filename
+    current_meta['file_size'] = file_size
+    current_meta['content_hash'] = file_hash
+    summary.meta_data = current_meta
+    summary.status = 'pending'
+    db.commit()
+    
+    # Queue job để re-process summary
+    job_id = f"update_{uuid.uuid4().hex[:8]}"
+    
+    queue_process_job(
+        job_id=job_id,
+        document_id=str(summary.id),  # Dùng summary_id làm document_id
+        file_path=normalized_path,
+        source_type="upload",
+        chunk_size=800,
+        chunk_overlap=150,
+        batch_id=None,
+        total_files=1,
+        is_summary=True,
+        summary_id=str(summary.id),  # Pass summary_id to update existing
+        target_document_ids=target_doc_ids
+    )
+    
+    return UpdateSummaryResponse(
+        status="updated",
+        summary_id=str(summary.id),
+        document_id=str(summary.id),  # Return summary_id as document_id
+        job_id=job_id,
+        message="Summary document đang được cập nhật (re-processing)"
     )
 
 
@@ -309,7 +700,7 @@ async def list_documents(
     # Đếm chunks cho mỗi document
     result = []
     for doc in documents:
-        chunk_count = db.query(Chunk).filter(Chunk.document_id == doc.id).count()
+        chunk_count = db.query(ChildChunk).filter(ChildChunk.document_id == doc.id).count()
         doc_dict = {
             "id": str(doc.id),  # type: ignore[arg-type]
             "file_path": str(doc.file_path),  # type: ignore[arg-type]
@@ -338,7 +729,7 @@ async def get_document(
     if not document:
         raise HTTPException(status_code=404, detail=f"Document không tồn tại: {document_id}")
     
-    chunk_count = db.query(Chunk).filter(Chunk.document_id == document.id).count()
+    chunk_count = db.query(ChildChunk).filter(ChildChunk.document_id == document.id).count()
     
     return DocumentResponse(
         id=str(document.id),  # type: ignore[arg-type]
@@ -372,63 +763,8 @@ async def delete_document(
 
 
 # ============================================================================
-# SEARCH & RAG ENDPOINTS
+# RAG ENDPOINTS
 # ============================================================================
-
-@router.post("/search", response_model=SearchResponse)
-async def search_chunks(
-    request: SearchRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Search chunks using BM25, semantic, or hybrid search
-    """
-    search_service = get_search_service(db)
-    
-    if request.search_type == "bm25":
-        results = search_service.bm25_search(
-            query=request.query,
-            k=request.top_k,
-            document_ids=request.document_ids
-        )
-    elif request.search_type == "semantic":
-        results = search_service.semantic_search(
-            query=request.query,
-            k=request.top_k,
-            document_ids=request.document_ids
-        )
-    else:  # hybrid
-        results = search_service.hybrid_search(
-            query=request.query,
-            k=request.top_k,
-            bm25_weight=request.bm25_weight,
-            semantic_weight=request.semantic_weight,
-            document_ids=request.document_ids
-        )
-    
-    # Format results
-    search_results = [
-        SearchResult(
-            id=r['id'],
-            content=r['content'],
-            score=r.get('fused_score') or r.get('score', 0.0),
-            h1=r.get('h1'),
-            h2=r.get('h2'),
-            h3=r.get('h3'),
-            document_id=str(r['document_id']),
-            chunk_index=r['chunk_index'],
-            metadata=r.get('metadata')
-        )
-        for r in results
-    ]
-    
-    return SearchResponse(
-        query=request.query,
-        results=search_results,
-        total=len(search_results),
-        search_type=request.search_type
-    )
-
 
 @router.post("/chat", response_model=ChatResponse)
 async def rag_chat(

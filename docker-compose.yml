@@ -4,15 +4,15 @@ services:
   # PostgreSQL with ParadeDB (includes pgvector + BM25)
   postgres:
     image: paradedb/paradedb:latest
-    container_name: rag_postgres
+    container_name: hierarchical_rag_postgres
     environment:
       POSTGRES_USER: rag_user
       POSTGRES_PASSWORD: rag_password
       POSTGRES_DB: rag_db
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - rag_postgres_data:/var/lib/postgresql
       - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rag_user -d rag_db"]
@@ -23,11 +23,11 @@ services:
   # Redis for queue
   redis:
     image: redis:7-alpine
-    container_name: rag_redis
+    container_name: hierarchical_rag_redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
-      - redis_data:/data
+      - rag_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -37,7 +37,7 @@ services:
   # FastAPI application
   api:
     build: .
-    container_name: rag_api
+    container_name: hierarchical_rag_api
     environment:
       DATABASE_URL: postgresql://rag_user:rag_password@postgres:5432/rag_db
       REDIS_URL: redis://redis:6379/0
@@ -59,10 +59,33 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # RQ Worker for process queue
-  worker_process:
+  # RQ Worker for process queue (Worker 1)
+  worker_process_1:
     build: .
-    container_name: rag_worker_process
+    container_name: hierarchical_rag_worker_process_1
+    environment:
+      DATABASE_URL: postgresql://rag_user:rag_password@postgres:5432/rag_db
+      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      EMBEDDING_MODEL_NAME: ${EMBEDDING_MODEL_NAME:-models/gemini-embedding-001}
+      DIMENSION_OF_MODEL: ${DIMENSION_OF_MODEL:-768}
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./app:/app/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: rq worker process --url redis://redis:6379/0
+
+  # RQ Worker for process queue (Worker 2)
+  worker_process_2:
+    build: .
+    container_name: hierarchical_rag_worker_process_2
     environment:
       DATABASE_URL: postgresql://rag_user:rag_password@postgres:5432/rag_db
       REDIS_URL: redis://redis:6379/0
@@ -83,5 +106,5 @@ services:
     command: rq worker process --url redis://redis:6379/0
 
 volumes:
-  postgres_data:
-  redis_data:
+  rag_postgres_data:
+  rag_redis_data:
