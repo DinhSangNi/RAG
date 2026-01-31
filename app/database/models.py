@@ -25,6 +25,7 @@ class Document(Base):
     
     # Relationship
     chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
+    summary_documents = relationship("SummaryDocument", back_populates="document", cascade="all, delete-orphan")
 
 
 class Chunk(Base):
@@ -58,3 +59,29 @@ class Chunk(Base):
     
     def __repr__(self):
         return f"<Chunk(id={self.id}, document_id={self.document_id}, chunk_index={self.chunk_index})>"
+
+
+class SummaryDocument(Base):
+    """Bảng lưu trữ summary documents cho hierarchical RAG"""
+    __tablename__ = "summary_documents"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Summary content
+    summary_content = Column(Text, nullable=False)
+    
+    # Vector embedding
+    embedding = Column(Vector(settings.DIMENSION_OF_MODEL))
+    
+    # Metadata
+    meta_data = Column(JSON, nullable=True, name="metadata")
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationship
+    document = relationship("Document", back_populates="summary_documents")
+    
+    def __repr__(self):
+        return f"<SummaryDocument(id={self.id}, document_id={self.document_id})>"

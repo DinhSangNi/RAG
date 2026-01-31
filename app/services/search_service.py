@@ -7,7 +7,7 @@ import math
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.database.models import Chunk, Document
+from app.database.models import Chunk, Document, SummaryDocument
 from app.services.embedding_service import get_embedding_service
 
 
@@ -258,6 +258,135 @@ class SearchService:
         if results:
             print(f"Top result: {results[0].get('h1', '')} / {results[0].get('h2', '')}")
             print(f"Top scores: {[round(r.get('fused_score', 0), 4) for r in results[:3]]}")
+        
+        return results
+    
+    def bm25_search_summaries(
+        self, 
+        query: str, 
+        k: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        BM25 search on summary documents using ParadeDB
+        """
+        print(f"🔍 BM25 Summary query: {query}")
+        
+        search_query = text("""
+            SELECT 
+                sd.id,
+                sd.summary_content,
+                sd.document_id,
+                sd.metadata as meta_data,
+                paradedb.score(sd.id) as rank
+            FROM summary_documents sd
+            WHERE sd.id @@@ paradedb.parse(:query_text)
+            ORDER BY rank DESC
+            LIMIT :limit_k
+        """)
+        
+        try:
+            results = self.db.execute(
+                search_query, 
+                {"query_text": query, "limit_k": k}
+            ).fetchall()
+            
+            print(f"📊 BM25 Summary: {len(results)} results")
+            
+            return [
+                {
+                    'id': str(r.id),
+                    'summary_content': r.summary_content,
+                    'document_id': str(r.document_id),
+                    'metadata': r.meta_data,
+                    'score': float(r.rank) if r.rank else 0.0
+                }
+                for r in results
+            ]
+        except Exception as e:
+            print(f"❌ BM25 Summary search error: {e}")
+            return []
+    
+    def semantic_search_summaries(
+        self, 
+        query: str, 
+        k: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Semantic search on summary documents using pgvector
+        """
+        # Generate query embedding
+        query_embedding = self.embedding_service.embed_text(query)
+        
+        # Query with cosine similarity
+        results = self.db.query(
+            SummaryDocument.id,
+            SummaryDocument.summary_content,
+            SummaryDocument.document_id,
+            SummaryDocument.meta_data,
+            (1 - SummaryDocument.embedding.cosine_distance(query_embedding)).label('similarity')
+        ).order_by(text('similarity DESC')).limit(k).all()
+        
+        return [
+            {
+                'id': str(r.id),
+                'summary_content': r.summary_content,
+                'document_id': str(r.document_id),
+                'metadata': r.meta_data,
+                'score': float(r.similarity) if r.similarity else 0.0
+            }
+            for r in results
+        ]
+    
+    def hybrid_search_summaries(
+        self,
+        query: str,
+        k: int = 5,
+        bm25_weight: float = 0.5,
+        semantic_weight: float = 0.5,
+        rrf_k: int = 60
+    ) -> List[Dict[str, Any]]:
+        """
+        Hybrid search on summary documents using RRF
+        """
+        print(f"\n🔍 HYBRID SEARCH SUMMARIES")
+        print(f"Query: {query}")
+        print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
+        
+        # Get BM25 results
+        bm25_results = self.bm25_search_summaries(query, k=max(k, 10))
+        print(f"📄 BM25 Summary: {len(bm25_results)} results")
+        
+        # Get semantic results
+        semantic_results = self.semantic_search_summaries(query, k=max(k, 10))
+        print(f"🎯 Semantic Summary: {len(semantic_results)} results")
+        
+        # RRF fusion
+        scores: Dict[str, Dict[str, Any]] = {}
+        
+        # Add BM25 scores
+        for rank, doc in enumerate(bm25_results, start=1):
+            doc_id = doc['id']
+            scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
+            scores[doc_id]['score'] += bm25_weight * (1.0 / (rrf_k + rank))
+        
+        # Add semantic scores
+        for rank, doc in enumerate(semantic_results, start=1):
+            doc_id = doc['id']
+            scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
+            scores[doc_id]['score'] += semantic_weight * (1.0 / (rrf_k + rank))
+        
+        # Sort by fused score
+        fused = sorted(scores.values(), key=lambda x: x['score'], reverse=True)
+        results = [x['doc'] for x in fused[:k]]
+        
+        # Add fused score and max score to results
+        for i, result in enumerate(results):
+            result['fused_score'] = fused[i]['score']
+        
+        max_score = results[0]['fused_score'] if results else 0.0
+        
+        print(f"✅ Fused Summaries: {len(results)} results")
+        print(f"Max score: {round(max_score, 4)}")
         
         return results
 

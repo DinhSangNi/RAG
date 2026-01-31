@@ -1,7 +1,3 @@
-"""
-RAG (Retrieval-Augmented Generation) Service
-Implements two-pass retrieval with query expansion and RRF fusion
-"""
 import json
 import re
 from typing import List, Dict, Any, Optional
@@ -92,6 +88,28 @@ CONTEXT:
 """)
         ])
         
+        # Sufficiency check prompt
+        self.sufficiency_prompt = ChatPromptTemplate.from_messages([
+            ("human", """Bạn là chuyên gia đánh giá thông tin. Hãy kiểm tra xem CONTEXT có đủ thông tin để trả lời CÂU HỎI hay không.
+
+Trả về JSON hợp lệ theo schema:
+{{
+  "sufficient": true/false,
+  "reason": "giải thích ngắn gọn tại sao đủ hoặc không đủ"
+}}
+
+Nguyên tắc:
+- sufficient = true: CONTEXT có đủ thông tin cụ thể để trả lời câu hỏi một cách chính xác
+- sufficient = false: CONTEXT thiếu thông tin quan trọng, quá chung chung, hoặc không liên quan
+- Chỉ trả về JSON, không thêm chữ nào khác
+
+CONTEXT:
+{context}
+
+CÂU HỎI: {question}
+""")
+        ])
+        
         # Build chains
         self.rag_chain = (
             {
@@ -105,8 +123,12 @@ CONTEXT:
         
         self.alias_chain = self.alias_prompt | self.llm | StrOutputParser()
         
+        self.sufficiency_chain = self.sufficiency_prompt | self.llm | StrOutputParser()
+        
         print("✅ RAG Service ready!")
     
+
+    ## Tách chuỗi thành các token thân thiện với tiếng Việt
     @staticmethod
     def _tokenize_vi(text: str) -> List[str]:
         """Vietnamese-friendly tokenizer"""
@@ -128,12 +150,57 @@ CONTEXT:
         
         return "\n\n".join(formatted)
     
+    def _format_summary_docs(self, docs: List[Dict[str, Any]]) -> str:
+        """Format summary documents for context"""
+        if not docs:
+            return "Không tìm thấy thông tin liên quan trong tài liệu."
+        
+        formatted = []
+        for i, doc in enumerate(docs, 1):
+            content = doc.get('summary_content', '')
+            formatted.append(f"--- Tóm tắt {i} ---\n{content}")
+        
+        return "\n\n".join(formatted)
+    
+    def _check_info_sufficiency(
+        self,
+        question: str,
+        summary_docs: List[Dict[str, Any]]
+    ) -> bool:
+        """
+        Check if summary documents have enough information to answer the question
+        Returns True if sufficient, False otherwise
+        """
+        if not summary_docs:
+            return False
+        
+        context = self._format_summary_docs(summary_docs)
+        
+        try:
+            raw = self.sufficiency_chain.invoke({
+                "question": question,
+                "context": context
+            })
+            
+            # Parse JSON response
+            data = json.loads(raw)
+            sufficient = data.get("sufficient", False)
+            reason = data.get("reason", "")
+            
+            print(f"🧠 Sufficiency check: {sufficient} - {reason}")
+            return sufficient
+            
+        except Exception as e:
+            print(f"⚠️ Sufficiency check failed: {e}")
+            # If check fails, assume not sufficient to be safe
+            return False
+    
+    ## Trích xuất thực thể, bí danh, từ khóa từ ngữ cảnh bằng LLM
     def _extract_entity_info(
         self, 
         question: str, 
         docs: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Extract entity, aliases, and keywords using LLM"""
         context = self._format_docs(docs[:min(len(docs), 8)])
         
         try:
@@ -238,6 +305,158 @@ CONTEXT:
         
         return fused
     
+    def retrieve_hierarchical(
+        self,
+        question: str,
+        summary_k: int = 5,
+        chunk_k: int = 20,
+        min_summary_score: float = 0.3
+    ) -> Dict[str, Any]:
+        """
+        Hierarchical retrieval workflow with 6 steps:
+        
+        Step 1: Query on summary documents (hybrid search) => get relevant documents (determine scope)
+                If no summary docs found or max score < min_summary_score, search all child chunks
+        Step 2: Format summary docs as context => Send to LLM to check if enough info to answer
+        Step 3: If enough: return summary docs for answer generation
+                If not enough: query expansion => extract entities, aliases, keywords
+        Step 4: Use each query variant to search child chunks belonging to summary docs from step 1
+                If step 1 found nothing, search all child chunks
+        Step 5: Aggregate results, calculate RRF scores for chunks from step 4
+        Step 6: Return chunks for answer generation
+        
+        Returns:
+            {
+                'docs': List[Dict],  # Documents to use for answer
+                'source': str,  # 'summary' or 'chunks'
+                'metadata': Dict
+            }
+        """
+        print(f"\n{'='*70}")
+        print(f"🔍 HIERARCHICAL RETRIEVAL")
+        print(f"{'='*70}")
+        print(f"Question: {question}")
+        
+        # STEP 1: Query on summary documents
+        print(f"\n📋 STEP 1: Search summary documents")
+        summary_docs = self.search_service.hybrid_search_summaries(
+            query=question,
+            k=summary_k,
+            bm25_weight=self.bm25_weight,
+            semantic_weight=self.semantic_weight,
+            rrf_k=self.rrf_k
+        )
+        
+        max_score = summary_docs[0]['fused_score'] if summary_docs else 0.0
+        print(f"Found {len(summary_docs)} summary docs, max score: {round(max_score, 4)}")
+        
+        # Check if we should fall back to full child chunk search
+        if not summary_docs or max_score < min_summary_score:
+            print(f"⚠️ No good summary docs found (max score < {min_summary_score})")
+            print(f"Falling back to full child chunk search")
+            
+            # Search all child chunks directly
+            all_chunks = self.search_service.hybrid_search(
+                query=question,
+                k=chunk_k,
+                bm25_weight=self.bm25_weight,
+                semantic_weight=self.semantic_weight,
+                rrf_k=self.rrf_k
+            )
+            
+            return {
+                'docs': all_chunks,
+                'source': 'chunks_fallback',
+                'metadata': {
+                    'summary_docs_found': len(summary_docs),
+                    'max_summary_score': max_score,
+                    'chunks_returned': len(all_chunks)
+                }
+            }
+        
+        # Extract document IDs from summary docs for scoping
+        relevant_doc_ids = list(set([doc['document_id'] for doc in summary_docs]))
+        print(f"Scope: {len(relevant_doc_ids)} parent documents")
+        
+        # STEP 2: Check if summary docs have enough information
+        print(f"\n🧠 STEP 2: Check information sufficiency")
+        is_sufficient = self._check_info_sufficiency(question, summary_docs)
+        
+        # STEP 3: Decision point
+        if is_sufficient:
+            print(f"\n✅ STEP 3: Summary docs are sufficient - using them for answer")
+            return {
+                'docs': summary_docs,
+                'source': 'summary',
+                'metadata': {
+                    'summary_docs_count': len(summary_docs),
+                    'max_summary_score': max_score,
+                    'sufficient': True
+                }
+            }
+        else:
+            print(f"\n🔄 STEP 3: Not sufficient - proceeding with query expansion")
+            
+            # Extract entity info for query expansion
+            # First get some chunks from the relevant docs for context
+            initial_chunks = self.search_service.hybrid_search(
+                query=question,
+                k=self.first_pass_k,
+                bm25_weight=self.bm25_weight,
+                semantic_weight=self.semantic_weight,
+                rrf_k=self.rrf_k,
+                document_ids=relevant_doc_ids
+            )
+            
+            info = self._extract_entity_info(question, initial_chunks)
+            entity = info.get("entity", "")
+            aliases = info.get("aliases") or []
+            keywords = info.get("keywords") or []
+            
+            print(f"🧠 Entity: {entity or '(none)'} | Aliases: {len(aliases)} | Keywords: {len(keywords)}")
+            
+            # Generate query variants
+            variants = self._make_variants(question, info)
+            print(f"🧩 Variants: {len(variants)}")
+            for i, v in enumerate(variants, 1):
+                print(f"   Q{i}: {v}")
+            
+            # STEP 4: Search child chunks with each variant (scoped to relevant docs)
+            print(f"\n🔎 STEP 4: Search child chunks with variants (scoped)")
+            all_results = []
+            
+            for i, variant in enumerate(variants, 1):
+                print(f"Variant {i}/{len(variants)}: {variant[:60]}...")
+                results = self.search_service.hybrid_search(
+                    query=variant,
+                    k=max(chunk_k, 20),
+                    bm25_weight=self.bm25_weight,
+                    semantic_weight=self.semantic_weight,
+                    rrf_k=self.rrf_k,
+                    document_ids=relevant_doc_ids
+                )
+                all_results.append(results)
+                print(f"  → {len(results)} chunks")
+            
+            # STEP 5: RRF fusion of all variant results
+            print(f"\n📊 STEP 5: RRF fusion of {len(all_results)} result sets")
+            fused_chunks = self._rrf_fuse(all_results, rrf_k=self.rrf_k, top_k=chunk_k)
+            print(f"✅ Fused: {len(fused_chunks)} chunks")
+            
+            # STEP 6: Return fused chunks for answer generation
+            return {
+                'docs': fused_chunks,
+                'source': 'chunks_expanded',
+                'metadata': {
+                    'summary_docs_count': len(summary_docs),
+                    'max_summary_score': max_score,
+                    'sufficient': False,
+                    'variants_count': len(variants),
+                    'chunks_returned': len(fused_chunks),
+                    'scoped_to_docs': len(relevant_doc_ids)
+                }
+            }
+    
     def retrieve(
         self, 
         question: str,
@@ -302,10 +521,17 @@ CONTEXT:
         self, 
         question: str, 
         document_ids: Optional[List[str]] = None,
-        verbose: bool = False
+        verbose: bool = False,
+        use_hierarchical: bool = True
     ) -> Dict[str, Any]:
         """
         RAG chat: retrieve + generate answer
+        
+        Args:
+            question: User question
+            document_ids: Optional filter by document IDs (only works with old retrieve method)
+            verbose: Print detailed context
+            use_hierarchical: Use new hierarchical retrieval workflow (default: True)
         
         Returns:
             {
@@ -314,26 +540,56 @@ CONTEXT:
                 'metadata': Dict
             }
         """
-        # Retrieve relevant chunks
-        docs = self.retrieve(question, document_ids=document_ids)
+        # Choose retrieval strategy
+        if use_hierarchical:
+            # New hierarchical retrieval workflow
+            result = self.retrieve_hierarchical(question)
+            docs = result['docs']
+            source = result['source']
+            metadata = result['metadata']
+            metadata['retrieval_method'] = 'hierarchical'
+        else:
+            # Old two-pass retrieval with query expansion
+            docs = self.retrieve(question, document_ids=document_ids)
+            source = 'legacy'
+            metadata = {'retrieval_method': 'legacy'}
         
         if not docs:
             return {
                 'answer': "Tôi không tìm thấy thông tin này trong tài liệu.",
                 'chunks': [],
-                'metadata': {'chunks_used': 0}
+                'metadata': {**metadata, 'chunks_used': 0}
             }
         
         if verbose:
             print(f"\n{'='*70}\nCONTEXT:\n{'='*70}")
             for i, doc in enumerate(docs[:5], 1):
-                print(f"\n📄 Chunk {i}:")
-                print(f"   Headers: {doc.get('h1', '')} / {doc.get('h2', '')}")
-                print(f"   Preview: {doc.get('content', '')[:200]}...")
+                print(f"\n📄 Doc {i}:")
+                if source == 'summary':
+                    print(f"   Type: Summary Document")
+                    print(f"   Preview: {doc.get('summary_content', '')[:200]}...")
+                else:
+                    print(f"   Type: Chunk")
+                    print(f"   Headers: {doc.get('h1', '')} / {doc.get('h2', '')}")
+                    print(f"   Preview: {doc.get('content', '')[:200]}...")
         
-        # Generate answer
+        # Generate answer based on source type
         print("\n💬 Generating answer...")
-        answer = self.rag_chain.invoke({"docs": docs, "question": question})
+        
+        if source == 'summary':
+            # Use summary documents - format differently
+            formatted_docs = []
+            for doc in docs:
+                formatted_docs.append({
+                    'content': doc.get('summary_content', ''),
+                    'h1': 'Summary',
+                    'h2': ''
+                })
+            answer = self.rag_chain.invoke({"docs": formatted_docs, "question": question})
+        else:
+            # Use regular chunks
+            answer = self.rag_chain.invoke({"docs": docs, "question": question})
+        
         answer = (answer or "").strip()
         
         # Normalize fallback
@@ -344,7 +600,9 @@ CONTEXT:
             'answer': answer,
             'chunks': docs[:10],  # Return top 10 for reference
             'metadata': {
+                **metadata,
                 'chunks_used': len(docs),
+                'source': source,
                 'model': getattr(self.llm, 'model', 'unknown')
             }
         }
