@@ -22,10 +22,16 @@ def queue_process_job(
     chunk_size: int = 800,
     chunk_overlap: int = 150,
     batch_id: str | None = None,
-    total_files: int = 1
+    total_files: int = 1,
+    is_summary: bool = False,
+    summary_id: str | None = None
 ):
     """
     Queue job để xử lý toàn bộ: ingest + chunk
+    
+    Args:
+        is_summary: Nếu True, file sẽ được xử lý như summary document
+        summary_id: UUID của summary document - child chunks sẽ được gắn với summary này
     """
     from app.workers.process_worker import process_document
     
@@ -55,7 +61,9 @@ def queue_process_job(
             "source_type": source_type,
             "chunk_size": chunk_size,
             "chunk_overlap": chunk_overlap,
-            "batch_id": batch_id
+            "batch_id": batch_id,
+            "is_summary": is_summary,
+            "summary_id": summary_id
         },
         job_id=job_id,
         job_timeout='2h'

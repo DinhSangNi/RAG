@@ -8,11 +8,11 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 import markitdown
 from rq import get_current_job
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
-from app.database.models import Document, Chunk
+from app.database.models import Document, ChildChunk, SummaryDocument
 from app.services.chunking_service import get_chunking_service
 from app.services.embedding_service import get_embedding_service
 
@@ -25,14 +25,18 @@ def clean_wikipedia_html(html_file_path):
     with open(html_file_path, "r", encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
 
+    # Tìm vùng content Wikipedia, nếu không có thì dùng body hoặc toàn bộ
     content = soup.find("div", class_="mw-parser-output")
-
+    
     if not content:
-        print("Không tìm thấy vùng nội dung chính!")
-        return
+        print("Không tìm thấy vùng Wikipedia, sẽ clean toàn bộ HTML")
+        # Thử tìm body tag, nếu không có thì dùng soup
+        content = soup.find("body")
+        if not content:
+            content = soup
     
     # Remove unwanted tags and elements
-    tags_without_class = ['audio', 'style', 'img', 'sup', 'link', 'input']
+    tags_without_class = ['audio', 'style', 'img', 'sup', 'link', 'input', 'script', 'meta', 'noscript']
     for tag in tags_without_class:
         for element in content.find_all(tag):
             element.decompose()
@@ -251,17 +255,24 @@ def process_document(
     source_type: str,
     chunk_size: int = 800,
     chunk_overlap: int = 150,
-    batch_id: str | None = None
+    batch_id: str | None = None,
+    is_summary: bool = False,
+    summary_id: str | None = None
 ):
     """
     Worker function để xử lý toàn bộ: ingest + chunk + embeddings
+    
     Workflow:
     1. Clean HTML (nếu là HTML)
     2. Convert to Markdown
     3. Normalize Markdown
-    4. Chunk document
-    5. Tạo embeddings
-    6. Lưu vào PostgreSQL
+    4. Nếu is_summary=True: Tạo summary document
+       Nếu is_summary=False: Chunk document + embeddings
+    5. Lưu vào PostgreSQL
+    
+    Args:
+        is_summary: Nếu True, file được xử lý như summary document
+        summary_id: UUID của summary document - child chunks sẽ được gắn với summary này
     """
     job = get_current_job()
     db = SessionLocal()
@@ -351,19 +362,7 @@ def process_document(
         print(f"✅ Ingest phase completed")
         print(f"⏱️  Total INGEST time: {phase_duration:.2f}s")
         
-        # ========================================================================
-        # PHASE 2: CHUNKING (30-50%)
-        # ========================================================================
-        print(f"\n{'='*70}")
-        print(f"🔪 PHASE 2: CHUNKING - Starting")
-        print(f"{'='*70}")
-        phase_start = time.time()
-        
-        # Bước 4: Load markdown content
-        if job:
-            job.meta['progress'] = {'step': 'loading_file', 'current': 35, 'total': 100}
-            job.save_meta()
-        
+        # Load markdown content first (needed for both paths)
         step_start = time.time()
         with open(md_file_path, 'r', encoding='utf-8') as f:
             text = f.read()
@@ -372,6 +371,131 @@ def process_document(
         print(f"⏱️  File Loading took: {step_duration:.2f}s")
         timing_stats['phases']['file_loading'] = step_duration
         
+        # ========================================================================
+        # BRANCH: Process as Summary Document or Regular Document
+        # ========================================================================
+        if is_summary:
+            # ====================================================================
+            # SUMMARY DOCUMENT PATH: Create summary_document record
+            # ====================================================================
+            print(f"\n{'='*70}")
+            print(f"📋 PROCESSING AS SUMMARY DOCUMENT")
+            print(f"{'='*70}")
+            
+            # Update progress
+            if job:
+                job.meta['progress'] = {'step': 'creating_summary_embedding', 'current': 50, 'total': 100}
+                job.save_meta()
+            
+            # Create embedding for summary content
+            phase_start = time.time()
+            embedding_service = get_embedding_service()
+            summary_embedding = embedding_service.embed_text(text)
+            step_duration = time.time() - phase_start
+            print(f"🎯 Created summary embedding")
+            print(f"⏱️  Embedding generation took: {step_duration:.2f}s")
+            timing_stats['phases']['embedding_generation'] = step_duration
+            timing_stats['phases']['embedding_total'] = step_duration
+            
+            # Delete old summary document if exists
+            db.query(SummaryDocument).filter(SummaryDocument.document_id == document_id).delete()
+            db.commit()
+            
+            # Save summary document
+            if job:
+                job.meta['progress'] = {'step': 'saving_summary_to_db', 'current': 80, 'total': 100}
+                job.save_meta()
+            
+            phase_start = time.time()
+            # Tính content hash cho summary
+            import hashlib
+            content_hash_for_summary = hashlib.sha256(text.encode('utf-8')).hexdigest()
+            
+            summary_doc = SummaryDocument(
+                document_id=document_id,
+                summary_content=text,
+                content_hash=content_hash_for_summary,  # Lưu vào cột riêng
+                embedding=summary_embedding,
+                meta_data={'processed_file': md_file_path, 'original_file': file_path}
+            )
+            db.add(summary_doc)
+            db.commit()
+            db.refresh(summary_doc)
+            step_duration = time.time() - phase_start
+            print(f"💾 Saved summary document to database")
+            print(f"⏱️  Database save took: {step_duration:.2f}s")
+            timing_stats['phases']['database_save'] = step_duration
+            timing_stats['phases']['database_total'] = step_duration
+            
+            # Update document metadata
+            if job:
+                job.meta['progress'] = {'step': 'finalizing', 'current': 95, 'total': 100}
+                job.save_meta()
+            
+            current_meta = document.meta_data or {}
+            if isinstance(current_meta, dict):
+                current_meta['summary_id'] = str(summary_doc.id)
+                current_meta['is_summary'] = True
+                current_meta['processing_time'] = timing_stats
+                # Use SQLAlchemy update method for columns
+                db.execute(
+                    update(Document)
+                    .where(Document.id == document.id)
+                    .values(meta_data=current_meta, status="completed")
+                )
+            else:
+                db.execute(
+                    update(Document)
+                    .where(Document.id == document.id)
+                    .values(status="completed")
+                )
+            db.commit()
+            
+            # Calculate total time
+            total_duration = time.time() - timing_stats['total_start']
+            timing_stats['total_duration'] = total_duration
+            
+            # Print summary
+            print(f"\n{'='*70}")
+            print(f"✅ SUMMARY DOCUMENT PROCESSING COMPLETED")
+            print(f"{'='*70}")
+            print(f"📊 Document ID: {document_id}")
+            print(f"📊 Summary ID: {summary_doc.id}")
+            print(f"📊 Content length: {len(text)} chars")
+            print(f"⏱️  TOTAL TIME: {total_duration:.2f}s")
+            print(f"{'='*70}\n")
+            
+            # Update batch tracking if needed
+            if batch_id:
+                batch_key = f"batch:{batch_id}"
+                pipe = redis_conn.pipeline()
+                pipe.hincrby(batch_key, "completed_files", 1)
+                pipe.hincrbyfloat(batch_key, "ingest_total", timing_stats['phases'].get('ingest_total', 0))
+                pipe.hincrbyfloat(batch_key, "embedding_total", timing_stats['phases'].get('embedding_total', 0))
+                pipe.hincrbyfloat(batch_key, "database_total", timing_stats['phases'].get('database_total', 0))
+                pipe.hincrbyfloat(batch_key, "processing_total", total_duration)
+                pipe.execute()
+            
+            return {
+                'job_id': job_id,
+                'status': 'completed',
+                'message': f'Đã xử lý summary document thành công',
+                'document_id': document_id,
+                'summary_id': str(summary_doc.id),
+                'progress': {'step': 'completed', 'current': 100, 'total': 100},
+                'timing': timing_stats
+            }
+        
+        # ========================================================================
+        # REGULAR DOCUMENT PATH: CHUNKING (30-50%)
+        # ========================================================================
+        print(f"\n{'='*70}")
+        print(f"🔪 PHASE 2: CHUNKING - Starting")
+        print(f"{'='*70}")
+        phase_start = time.time()
+        
+        # Bước 4 was file loading - moved above
+        
         # Bước 5: Chunk document
         if job:
             job.meta['progress'] = {'step': 'chunking', 'current': 40, 'total': 100}
@@ -379,9 +503,11 @@ def process_document(
         
         step_start = time.time()
         chunking_service = get_chunking_service(chunk_size, chunk_overlap)
-        chunks = chunking_service.chunk_markdown(text, md_file_path)
+        chunking_result = chunking_service.chunk_markdown(text, md_file_path)
+        parent_chunks = chunking_result['parent_chunks']
+        child_chunks = chunking_result['child_chunks']
         step_duration = time.time() - step_start
-        print(f"🔪 Created {len(chunks)} chunks")
+        print(f"🔪 Created {len(parent_chunks)} parent chunks, {len(child_chunks)} child chunks")
         print(f"⏱️  Chunking took: {step_duration:.2f}s")
         timing_stats['phases']['chunking'] = step_duration
         
@@ -404,14 +530,22 @@ def process_document(
         
         step_start = time.time()
         embedding_service = get_embedding_service()
-        chunk_texts = [chunk['content'] for chunk in chunks]
-        embeddings = embedding_service.embed_documents(chunk_texts)
+        
+        # Generate embeddings for parent chunks
+        parent_texts = [chunk['content'] for chunk in parent_chunks]
+        parent_embeddings = embedding_service.embed_documents(parent_texts) if parent_texts else []
+        
+        # Generate embeddings for child chunks
+        child_texts = [chunk['content'] for chunk in child_chunks]
+        child_embeddings = embedding_service.embed_documents(child_texts)
+        
+        total_embeddings = len(parent_embeddings) + len(child_embeddings)
         step_duration = time.time() - step_start
-        print(f"🎯 Created {len(embeddings)} embeddings")
+        print(f"🎯 Created {len(parent_embeddings)} parent embeddings, {len(child_embeddings)} child embeddings")
         print(f"⏱️  Embedding generation took: {step_duration:.2f}s")
-        print(f"⏱️  Average per chunk: {step_duration/len(chunks):.3f}s")
+        print(f"⏱️  Average per chunk: {step_duration/total_embeddings:.3f}s")
         timing_stats['phases']['embedding_generation'] = step_duration
-        timing_stats['phases']['embedding_per_chunk'] = step_duration / len(chunks)
+        timing_stats['phases']['embedding_per_chunk'] = step_duration / total_embeddings if total_embeddings > 0 else 0
         
         phase_duration = time.time() - phase_start
         timing_stats['phases']['embedding_total'] = phase_duration
@@ -429,50 +563,86 @@ def process_document(
         phase_start = time.time()
         
         # Bước 7: Xóa chunks cũ (nếu có)
-        db.query(Chunk).filter(Chunk.document_id == document_id).delete()
+        from app.database.models import ParentChunk
+        db.query(ParentChunk).filter(ParentChunk.document_id == document_id).delete()
+        db.query(ChildChunk).filter(ChildChunk.document_id == document_id).delete()
         db.commit()
         
-        # Bước 8: Lưu chunks vào database
+        # Bước 8: Lưu parent chunks vào database trước
         if job:
-            job.meta['progress'] = {'step': 'saving_to_db', 'current': 60, 'total': 100}
+            job.meta['progress'] = {'step': 'saving_parent_chunks', 'current': 60, 'total': 100}
             job.save_meta()
         
         step_start = time.time()
-        total_chunks = len(chunks)
-        for idx, (chunk_data, embedding) in enumerate(zip(chunks, embeddings)):
-            chunk = Chunk(
+        parent_id_mapping = {}  # Map section_id -> parent_chunk.id
+        
+        for idx, (parent_data, embedding) in enumerate(zip(parent_chunks, parent_embeddings)):
+            parent_chunk = ParentChunk(
                 document_id=document_id,
-                content=chunk_data['content'],
+                content=parent_data['content'],
                 embedding=embedding,
-                chunk_index=chunk_data['chunk_index'],
-                section_id=chunk_data['metadata'].get('section_id'),
-                sub_chunk_id=chunk_data['metadata'].get('sub_chunk_id'),
-                h1=chunk_data['metadata'].get('h1'),
-                h2=chunk_data['metadata'].get('h2'),
-                h3=chunk_data['metadata'].get('h3'),
-                metadata=chunk_data['metadata']
+                chunk_index=parent_data['chunk_index'],
+                h1=parent_data['metadata'].get('h1'),
+                h2=parent_data['metadata'].get('h2'),
+                h3=parent_data['metadata'].get('h3'),
+                meta_data=parent_data['metadata']
+            )
+            db.add(parent_chunk)
+            db.flush()  # Get ID immediately
+            
+            # Map section_id to parent_chunk.id
+            parent_id_mapping[parent_data['section_id']] = parent_chunk.id
+        
+        db.commit()
+        print(f"💾 Saved {len(parent_chunks)} parent chunks")
+        
+        # Bước 9: Lưu child chunks vào database
+        if job:
+            job.meta['progress'] = {'step': 'saving_child_chunks', 'current': 70, 'total': 100}
+            job.save_meta()
+        
+        total_child_chunks = len(child_chunks)
+        for idx, (child_data, embedding) in enumerate(zip(child_chunks, child_embeddings)):
+            # Lấy parent_id từ mapping nếu chunk này có parent
+            parent_section_id = child_data.get('parent_section_id')
+            parent_id = parent_id_mapping.get(parent_section_id) if parent_section_id is not None else None
+            
+            chunk = ChildChunk(
+                document_id=document_id,
+                parent_id=parent_id,  # Link to parent chunk
+                summary_id=summary_id,  # Set summary_id cho child chunk
+                content=child_data['content'],
+                embedding=embedding,
+                chunk_index=child_data['chunk_index'],
+                section_id=child_data['metadata'].get('section_id'),
+                sub_chunk_id=child_data['metadata'].get('sub_chunk_id'),
+                h1=child_data['metadata'].get('h1'),
+                h2=child_data['metadata'].get('h2'),
+                h3=child_data['metadata'].get('h3'),
+                meta_data=child_data['metadata']
             )
             db.add(chunk)
             
             # Update progress
             if job and idx % 10 == 0:
-                progress = 60 + int((idx / total_chunks) * 35)
+                progress = 70 + int((idx / total_child_chunks) * 25)
                 job.meta['progress'] = {
-                    'step': 'saving_to_db',
+                    'step': 'saving_child_chunks',
                     'current': progress,
                     'total': 100,
                     'chunks_saved': idx,
-                    'total_chunks': total_chunks
+                    'total_chunks': total_child_chunks
                 }
                 job.save_meta()
         
         db.commit()
         step_duration = time.time() - step_start
-        print(f"💾 Saved {len(chunks)} chunks to database")
+        print(f"💾 Saved {len(child_chunks)} child chunks to database")
         print(f"⏱️  Database save took: {step_duration:.2f}s")
-        print(f"⏱️  Average per chunk: {step_duration/len(chunks):.3f}s")
+        total_chunks = len(parent_chunks) + len(child_chunks)
+        print(f"⏱️  Average per chunk: {step_duration/total_chunks:.3f}s")
         timing_stats['phases']['database_save'] = step_duration
-        timing_stats['phases']['db_save_per_chunk'] = step_duration / len(chunks)
+        timing_stats['phases']['db_save_per_chunk'] = step_duration / total_chunks if total_chunks > 0 else 0
         
         # Bước 9: Update document metadata với chunk info
         if job:
@@ -481,7 +651,9 @@ def process_document(
         
         current_meta = document.meta_data or {}  # type: ignore[assignment]
         if isinstance(current_meta, dict):
-            current_meta['chunk_count'] = len(chunks)
+            current_meta['parent_chunk_count'] = len(parent_chunks)
+            current_meta['child_chunk_count'] = len(child_chunks)
+            current_meta['chunk_count'] = len(child_chunks)  # Backward compatibility
             current_meta['chunk_size'] = chunk_size
             current_meta['chunk_overlap'] = chunk_overlap
             # Add timing stats to metadata
@@ -504,7 +676,7 @@ def process_document(
         print(f"✅ PROCESSING COMPLETED - Summary")
         print(f"{'='*70}")
         print(f"📊 Document ID: {document_id}")
-        print(f"📊 Total chunks created: {len(chunks)}")
+        print(f"📊 Total chunks created: {len(parent_chunks) + len(child_chunks)}")
         print(f"⏱️  TOTAL TIME: {total_duration:.2f}s")
         print(f"\n📈 Time Breakdown:")
         print(f"   • Ingest:    {timing_stats['phases'].get('ingest_total', 0):.2f}s ({timing_stats['phases'].get('ingest_total', 0)/total_duration*100:.1f}%)")
@@ -565,13 +737,13 @@ def process_document(
         return {
             'job_id': job_id,
             'status': 'completed',
-            'message': f'Đã xử lý document và tạo {len(chunks)} chunks thành công',
+            'message': f'Đã xử lý document và tạo {len(parent_chunks) + len(child_chunks)} chunks thành công',
             'document_id': document_id,
             'progress': {
                 'step': 'completed',
                 'current': 100,
                 'total': 100,
-                'chunks_saved': len(chunks)
+                'chunks_saved': len(child_chunks)
             },
             'timing': timing_stats
         }

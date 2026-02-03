@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from app.database.connection import get_db
-from app.database.models import Document, Chunk, SummaryDocument
+from app.database.models import Document, ChildChunk, ParentChunk, SummaryDocument
 from app.services.embedding_service import get_embedding_service
 from app.config import settings
 
@@ -52,7 +52,7 @@ def create_summary_for_document(
         return False
     
     # Get all chunks for this document
-    chunks = db.query(Chunk).filter(Chunk.document_id == document_id).order_by(Chunk.chunk_index).all()
+    chunks = db.query(ChildChunk).filter(ChildChunk.document_id == document_id).order_by(ChildChunk.chunk_index).all()
     
     if not chunks:
         print(f"⚠️ No chunks found for document {document_id}")
@@ -140,7 +140,7 @@ def main():
     embedding_service = get_embedding_service()
     
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp",
+        model=settings.GEMINI_MODEL_NAME,
         api_key=settings.GEMINI_API_KEY,
         temperature=0.1,
         convert_system_message_to_human=True

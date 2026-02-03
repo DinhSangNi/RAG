@@ -29,29 +29,23 @@ class ChunkingService:
             separators=["\n\n", "\n", ". ", " ", ""]
         )
     
-    def chunk_markdown(self, text: str, source_file: str = "") -> List[Dict[str, Any]]:
+    def chunk_markdown(self, text: str, source_file: str = "") -> Dict[str, Any]:
         """
-        Chunk một markdown document
+        Chunk một markdown document với hierarchical structure
         
         Returns:
-            List of dicts với format:
+            Dict with:
             {
-                'content': str,
-                'metadata': {
-                    'h1': str,
-                    'h2': str,
-                    'h3': str,
-                    'section_id': int,
-                    'sub_chunk_id': int,
-                    'source': str
-                }
+                'parent_chunks': List[Dict] - Sections lớn bị chia nhỏ,
+                'child_chunks': List[Dict] - Tất cả chunks (có parent_id nếu thuộc parent)
             }
         """
         # Bước 1: Split theo headers
         section_docs = self.section_splitter.split_text(text)
         
-        chunks = []
-        chunk_index = 0
+        parent_chunks = []
+        child_chunks = []
+        child_chunk_index = 0
         
         # Bước 2: Xử lý từng section
         for section_idx, section_doc in enumerate(section_docs):
@@ -64,12 +58,26 @@ class ChunkingService:
             
             # Nếu section quá lớn, tách tiếp
             if len(section_doc.page_content) > self.chunk_size:
+                # Lưu parent chunk (section gốc)
+                parent_chunk = {
+                    'content': section_doc.page_content,
+                    'chunk_index': section_idx,
+                    'metadata': {
+                        **headers,
+                        'source': source_file
+                    },
+                    'section_id': section_idx
+                }
+                parent_chunks.append(parent_chunk)
+                
+                # Chia section thành sub-chunks
                 sub_chunks = self.recursive_splitter.split_documents([section_doc])
                 
                 for sub_idx, sub_chunk in enumerate(sub_chunks):
-                    chunks.append({
+                    child_chunks.append({
                         'content': sub_chunk.page_content,
-                        'chunk_index': chunk_index,
+                        'chunk_index': child_chunk_index,
+                        'parent_section_id': section_idx,  # Đánh dấu thuộc parent nào
                         'metadata': {
                             **headers,
                             'section_id': section_idx,
@@ -77,12 +85,13 @@ class ChunkingService:
                             'source': source_file
                         }
                     })
-                    chunk_index += 1
+                    child_chunk_index += 1
             else:
-                # Section nhỏ, giữ nguyên
-                chunks.append({
+                # Section nhỏ, lưu trực tiếp vào child_chunks (không có parent)
+                child_chunks.append({
                     'content': section_doc.page_content,
-                    'chunk_index': chunk_index,
+                    'chunk_index': child_chunk_index,
+                    'parent_section_id': None,  # Không có parent
                     'metadata': {
                         **headers,
                         'section_id': section_idx,
@@ -90,9 +99,12 @@ class ChunkingService:
                         'source': source_file
                     }
                 })
-                chunk_index += 1
+                child_chunk_index += 1
         
-        return chunks
+        return {
+            'parent_chunks': parent_chunks,
+            'child_chunks': child_chunks
+        }
 
 
 def get_chunking_service(chunk_size: int = 800, chunk_overlap: int = 150) -> ChunkingService:

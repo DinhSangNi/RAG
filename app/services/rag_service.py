@@ -16,7 +16,7 @@ class RAGService:
     def __init__(
         self,
         db: Session,
-        model_name: str = "gemini-2.0-flash-exp",
+        model_name: str | None = None,
         temperature: float = 0.1,
         top_k: int = 20,
         bm25_weight: float = 0.6,
@@ -28,6 +28,11 @@ class RAGService:
         self.db = db
         self.search_service = SearchService(db)
         
+        # Sử dụng model từ config nếu không truyền vào
+        from app.config import settings
+        self.model_name = model_name or settings.GEMINI_MODEL_NAME
+        self.temperature = temperature
+        
         self.top_k = top_k
         self.first_pass_k = first_pass_k
         self.variant_count = variant_count
@@ -36,11 +41,11 @@ class RAGService:
         self.semantic_weight = semantic_weight
         
         # Initialize LLM
-        print(f"🤖 Initializing {model_name}...")
+        print(f"🤖 Initializing {self.model_name}...")
         self.llm = ChatGoogleGenerativeAI(
-            model=model_name,
+            model=self.model_name,
             api_key=settings.GEMINI_API_KEY,
-            temperature=temperature,
+            temperature=self.temperature,
             convert_system_message_to_human=True
         )
         
@@ -182,17 +187,30 @@ CÂU HỎI: {question}
                 "context": context
             })
             
-            # Parse JSON response
-            data = json.loads(raw)
-            sufficient = data.get("sufficient", False)
-            reason = data.get("reason", "")
+            # Clean potential markdown code blocks
+            clean_raw = raw.strip()
+            if clean_raw.startswith("```"):
+                lines = clean_raw.split("\n")
+                clean_raw = "\n".join(lines[1:-1]) if len(lines) > 2 else clean_raw
+                clean_raw = clean_raw.replace("```json", "").replace("```", "").strip()
             
-            print(f"🧠 Sufficiency check: {sufficient} - {reason}")
-            return sufficient
+            # Try to parse JSON response
+            try:
+                data = json.loads(clean_raw)
+                sufficient = data.get("sufficient", False)
+                reason = data.get("reason", "")
+                print(f"🧠 Sufficiency check: {sufficient} (reason: {reason[:50]})")
+                return sufficient
+            except json.JSONDecodeError:
+                # Fallback to simple YES/NO parsing
+                answer = raw.strip().upper()
+                sufficient = "YES" in answer or "CÓ" in answer or '"SUFFICIENT": TRUE' in answer
+                print(f"🧠 Sufficiency check: {sufficient} (fallback parse, response: {raw[:50]})")
+                return sufficient
             
         except Exception as e:
             print(f"⚠️ Sufficiency check failed: {e}")
-            # If check fails, assume not sufficient to be safe
+            # If check fails, assume not sufficient to drill down
             return False
     
     ## Trích xuất thực thể, bí danh, từ khóa từ ngữ cảnh bằng LLM
@@ -208,6 +226,19 @@ CÂU HỎI: {question}
                 "question": question, 
                 "context": context
             })
+            
+            # Debug output
+            if not raw or not raw.strip():
+                print(f"⚠️ Entity extraction: LLM returned empty response")
+                return {"entity": "", "aliases": [], "keywords": []}
+            
+            # Clean potential markdown code blocks
+            raw = raw.strip()
+            if raw.startswith("```"):
+                # Remove markdown code fence
+                lines = raw.split("\n")
+                raw = "\n".join(lines[1:-1]) if len(lines) > 2 else raw
+                raw = raw.replace("```json", "").replace("```", "").strip()
             
             # Try to parse JSON
             data = json.loads(raw)
@@ -228,6 +259,10 @@ CÂU HỎI: {question}
                 "aliases": aliases,
                 "keywords": keywords
             }
+        except json.JSONDecodeError as e:
+            print(f"⚠️ Entity extraction JSON parse error: {e}")
+            print(f"📝 Raw output: {raw[:200] if raw else '(empty)'}")
+            return {"entity": "", "aliases": [], "keywords": []}
         except Exception as e:
             print(f"⚠️ Entity extraction failed: {e}")
             return {"entity": "", "aliases": [], "keywords": []}
@@ -305,12 +340,62 @@ CÂU HỎI: {question}
         
         return fused
     
+    def _get_parent_chunks_context(
+        self, 
+        child_chunks: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Lấy parent chunks từ danh sách child chunks
+        Deduplicate parent_ids trước khi query
+        
+        Args:
+            child_chunks: List of child chunk dicts with 'parent_id' field
+        
+        Returns:
+            List of parent chunk dicts for context
+        """
+        from app.database.models import ParentChunk
+        
+        # Extract parent_ids from child chunks (filter out None)
+        parent_ids = [chunk['parent_id'] for chunk in child_chunks if chunk.get('parent_id')]
+        
+        if not parent_ids:
+            print(f"⚠️ No parent chunks found - using child chunks directly")
+            return child_chunks
+        
+        # Deduplicate parent_ids while preserving order
+        unique_parent_ids = list(dict.fromkeys(parent_ids))
+        print(f"📋 Extracting {len(unique_parent_ids)} unique parent chunks from {len(child_chunks)} child chunks")
+        
+        # Query parent chunks
+        parent_chunks = self.db.query(ParentChunk).filter(
+            ParentChunk.id.in_(unique_parent_ids)
+        ).all()
+        
+        # Convert to dict format
+        parent_chunks_dict = [
+            {
+                'id': pc.id,
+                'content': pc.content,
+                'document_id': str(pc.document_id),
+                'h1': pc.h1,
+                'h2': pc.h2,
+                'h3': pc.h3,
+                'chunk_index': pc.chunk_index,
+                'metadata': pc.meta_data
+            }
+            for pc in parent_chunks
+        ]
+        
+        print(f"✅ Retrieved {len(parent_chunks_dict)} parent chunks for context")
+        return parent_chunks_dict
+    
     def retrieve_hierarchical(
         self,
         question: str,
         summary_k: int = 5,
         chunk_k: int = 20,
-        min_summary_score: float = 0.3
+        min_summary_score: float = 0.005
     ) -> Dict[str, Any]:
         """
         Hierarchical retrieval workflow with 6 steps:
@@ -353,30 +438,70 @@ CÂU HỎI: {question}
         # Check if we should fall back to full child chunk search
         if not summary_docs or max_score < min_summary_score:
             print(f"⚠️ No good summary docs found (max score < {min_summary_score})")
-            print(f"Falling back to full child chunk search")
+            print(f"Falling back to full child chunk search with 2-pass retrieval")
             
-            # Search all child chunks directly
-            all_chunks = self.search_service.hybrid_search(
+            # PASS 1: Initial search on all child chunks
+            print(f"\n📦 FALLBACK - Pass 1: Initial search")
+            first_pass_chunks = self.search_service.hybrid_search(
                 query=question,
-                k=chunk_k,
+                k=self.first_pass_k,
                 bm25_weight=self.bm25_weight,
                 semantic_weight=self.semantic_weight,
                 rrf_k=self.rrf_k
             )
+            print(f"Found {len(first_pass_chunks)} chunks in first pass")
+            
+            # Extract entity info for query expansion
+            print(f"\n🔄 FALLBACK - Query expansion")
+            info = self._extract_entity_info(question, first_pass_chunks)
+            entity = info.get("entity", "")
+            aliases = info.get("aliases") or []
+            keywords = info.get("keywords") or []
+            
+            print(f"🧠 Entity: {entity or '(none)'} | Aliases: {len(aliases)} | Keywords: {len(keywords)}")
+            
+            # Generate query variants
+            variants = self._make_variants(question, info)
+            print(f"🧩 Variants: {len(variants)}")
+            for i, v in enumerate(variants, 1):
+                print(f"   Q{i}: {v}")
+            
+            # PASS 2: Search with variants on all child chunks
+            print(f"\n🔎 FALLBACK - Pass 2: Search with variants")
+            all_results = [first_pass_chunks]
+            
+            for i, variant in enumerate(variants, 1):
+                print(f"Variant {i}/{len(variants)}: {variant[:60]}...")
+                results = self.search_service.hybrid_search(
+                    query=variant,
+                    k=max(chunk_k, 20),
+                    bm25_weight=self.bm25_weight,
+                    semantic_weight=self.semantic_weight,
+                    rrf_k=self.rrf_k
+                )
+                all_results.append(results)
+                print(f"  → {len(results)} chunks")
+            
+            # RRF fusion
+            print(f"\n📊 FALLBACK - RRF fusion of {len(all_results)} result sets")
+            fused_chunks = self._rrf_fuse(all_results, rrf_k=self.rrf_k, top_k=chunk_k)
+            print(f"✅ Fused: {len(fused_chunks)} chunks")
             
             return {
-                'docs': all_chunks,
+                'docs': fused_chunks,
                 'source': 'chunks_fallback',
                 'metadata': {
                     'summary_docs_found': len(summary_docs),
                     'max_summary_score': max_score,
-                    'chunks_returned': len(all_chunks)
+                    'chunks_returned': len(fused_chunks),
+                    'variants_count': len(variants),
+                    'fallback_mode': 'two_pass'
                 }
             }
         
-        # Extract document IDs from summary docs for scoping
-        relevant_doc_ids = list(set([doc['document_id'] for doc in summary_docs]))
-        print(f"Scope: {len(relevant_doc_ids)} parent documents")
+        # Extract summary IDs from summary docs for scoped search
+        summary_ids = [doc['id'] for doc in summary_docs]
+        print(f"Scope: {len(summary_ids)} summary documents")
         
         # STEP 2: Check if summary docs have enough information
         print(f"\n🧠 STEP 2: Check information sufficiency")
@@ -398,14 +523,14 @@ CÂU HỎI: {question}
             print(f"\n🔄 STEP 3: Not sufficient - proceeding with query expansion")
             
             # Extract entity info for query expansion
-            # First get some chunks from the relevant docs for context
+            # First get some child chunks from the relevant summaries for context
             initial_chunks = self.search_service.hybrid_search(
                 query=question,
                 k=self.first_pass_k,
                 bm25_weight=self.bm25_weight,
                 semantic_weight=self.semantic_weight,
                 rrf_k=self.rrf_k,
-                document_ids=relevant_doc_ids
+                summary_ids=summary_ids
             )
             
             info = self._extract_entity_info(question, initial_chunks)
@@ -421,8 +546,8 @@ CÂU HỎI: {question}
             for i, v in enumerate(variants, 1):
                 print(f"   Q{i}: {v}")
             
-            # STEP 4: Search child chunks with each variant (scoped to relevant docs)
-            print(f"\n🔎 STEP 4: Search child chunks with variants (scoped)")
+            # STEP 4: Search child chunks with each variant (scoped to summaries)
+            print(f"\n🔎 STEP 4: Search child chunks with variants (scoped to summaries)")
             all_results = []
             
             for i, variant in enumerate(variants, 1):
@@ -433,27 +558,32 @@ CÂU HỎI: {question}
                     bm25_weight=self.bm25_weight,
                     semantic_weight=self.semantic_weight,
                     rrf_k=self.rrf_k,
-                    document_ids=relevant_doc_ids
+                    summary_ids=summary_ids
                 )
                 all_results.append(results)
-                print(f"  → {len(results)} chunks")
+                print(f"  → {len(results)} child chunks")
             
             # STEP 5: RRF fusion of all variant results
             print(f"\n📊 STEP 5: RRF fusion of {len(all_results)} result sets")
-            fused_chunks = self._rrf_fuse(all_results, rrf_k=self.rrf_k, top_k=chunk_k)
-            print(f"✅ Fused: {len(fused_chunks)} chunks")
+            fused_child_chunks = self._rrf_fuse(all_results, rrf_k=self.rrf_k, top_k=chunk_k)
+            print(f"✅ Fused: {len(fused_child_chunks)} child chunks")
             
-            # STEP 6: Return fused chunks for answer generation
+            # STEP 5.5: Get parent chunks from child chunks for context
+            print(f"\n📋 STEP 5.5: Retrieve parent chunks for context")
+            parent_chunks = self._get_parent_chunks_context(fused_child_chunks)
+            
+            # STEP 6: Return parent chunks for answer generation
             return {
-                'docs': fused_chunks,
-                'source': 'chunks_expanded',
+                'docs': parent_chunks,
+                'source': 'parent_chunks_from_children',
                 'metadata': {
                     'summary_docs_count': len(summary_docs),
                     'max_summary_score': max_score,
                     'sufficient': False,
                     'variants_count': len(variants),
-                    'chunks_returned': len(fused_chunks),
-                    'scoped_to_docs': len(relevant_doc_ids)
+                    'child_chunks_found': len(fused_child_chunks),
+                    'parent_chunks_returned': len(parent_chunks),
+                    'scoped_to_summaries': len(summary_ids)
                 }
             }
     
@@ -479,7 +609,7 @@ CÂU HỎI: {question}
             bm25_weight=self.bm25_weight,
             semantic_weight=self.semantic_weight,
             rrf_k=self.rrf_k,
-            document_ids=document_ids
+            summary_ids=document_ids
         )
         print(f"📦 Pass 1: {len(first_pass)} chunks")
         
@@ -507,7 +637,7 @@ CÂU HỎI: {question}
                 bm25_weight=self.bm25_weight,
                 semantic_weight=self.semantic_weight,
                 rrf_k=self.rrf_k,
-                document_ids=document_ids
+                summary_ids=document_ids
             )
             all_results.append(results)
         
@@ -568,8 +698,12 @@ CÂU HỎI: {question}
                 if source == 'summary':
                     print(f"   Type: Summary Document")
                     print(f"   Preview: {doc.get('summary_content', '')[:200]}...")
+                elif source == 'parent_chunks_from_children':
+                    print(f"   Type: Parent Chunk")
+                    print(f"   Headers: {doc.get('h1', '')} / {doc.get('h2', '')}")
+                    print(f"   Preview: {doc.get('content', '')[:200]}...")
                 else:
-                    print(f"   Type: Chunk")
+                    print(f"   Type: Child Chunk")
                     print(f"   Headers: {doc.get('h1', '')} / {doc.get('h2', '')}")
                     print(f"   Preview: {doc.get('content', '')[:200]}...")
         
@@ -586,8 +720,11 @@ CÂU HỎI: {question}
                     'h2': ''
                 })
             answer = self.rag_chain.invoke({"docs": formatted_docs, "question": question})
+        elif source == 'parent_chunks_from_children':
+            # Use parent chunks (already in correct format)
+            answer = self.rag_chain.invoke({"docs": docs, "question": question})
         else:
-            # Use regular chunks
+            # Use child chunks or legacy chunks
             answer = self.rag_chain.invoke({"docs": docs, "question": question})
         
         answer = (answer or "").strip()

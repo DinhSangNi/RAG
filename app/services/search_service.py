@@ -7,7 +7,7 @@ import math
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.database.models import Chunk, Document, SummaryDocument
+from app.database.models import ChildChunk, ParentChunk, Document, SummaryDocument
 from app.services.embedding_service import get_embedding_service
 
 
@@ -35,8 +35,8 @@ class SearchService:
         """
         Build stopwords from corpus based on document frequency
         """
-        # Get all chunks
-        chunks = self.db.query(Chunk).all()
+        # Get all child chunks
+        chunks = self.db.query(ChildChunk).all()
         n_docs = max(1, len(chunks))
         
         df: Dict[str, int] = {}
@@ -65,21 +65,35 @@ class SearchService:
         self, 
         query: str, 
         k: int = 10,
-        document_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        BM25 search using ParadeDB pg_search extension
-        Native BM25 implementation with better multi-language support
+        BM25 search on child_chunks using ParadeDB pg_search extension
+        Filter by summary_ids if provided for scoped search
         """
         print(f"🔍 BM25 query: {query}")
         
-        # Build ParadeDB search query
-        # Use the BM25 index created on chunks table
-        search_query = text("""
+        # Build WHERE clause dynamically
+        # ParadeDB syntax: content @@@ 'search text'
+        where_conditions = ["content @@@ :query_text"]
+        params = {"query_text": query, "limit_k": k}
+        
+        if summary_ids:
+            # Convert UUID strings to UUID array for PostgreSQL
+            where_conditions.append("c.summary_id::text = ANY(:summary_ids)")
+            params["summary_ids"] = summary_ids
+            print(f"📌 Scoped to {len(summary_ids)} summary documents")
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # Build ParadeDB search query on child_chunks
+        search_query = text(f"""
             SELECT 
                 c.id,
                 c.content,
                 c.document_id,
+                c.parent_id,
+                c.summary_id,
                 c.h1,
                 c.h2,
                 c.h3,
@@ -88,26 +102,25 @@ class SearchService:
                 c.sub_chunk_id,
                 c.metadata as meta_data,
                 paradedb.score(c.id) as rank
-            FROM chunks c
-            WHERE c.id @@@ paradedb.parse(:query_text)
+            FROM child_chunks c
+            WHERE {where_clause}
             ORDER BY rank DESC
             LIMIT :limit_k
         """)
         
         # Execute query
         try:
-            results = self.db.execute(
-                search_query, 
-                {"query_text": query, "limit_k": k}
-            ).fetchall()
+            results = self.db.execute(search_query, params).fetchall()
             
-            print(f"📊 BM25 raw results: {len(results)} chunks")
+            print(f"📊 BM25 results: {len(results)} child chunks")
             
             return [
                 {
                     'id': r.id,
                     'content': r.content,
                     'document_id': str(r.document_id),
+                    'parent_id': r.parent_id,
+                    'summary_id': str(r.summary_id) if r.summary_id else None,
                     'h1': r.h1,
                     'h2': r.h2,
                     'h3': r.h3,
@@ -121,64 +134,44 @@ class SearchService:
             ]
         except Exception as e:
             print(f"❌ BM25 search error: {e}")
+            # Rollback transaction on error
+            self.db.rollback()
             return []
-        
-        # Filter by document_ids if provided
-        if document_ids:
-            base_query = base_query.filter(Chunk.document_id.in_(document_ids))
-        
-        # Order by rank and limit
-        results = base_query.order_by(text('rank DESC')).limit(k).all()
-        
-        print(f"📊 BM25 raw results: {len(results)} chunks")
-        
-        return [
-            {
-                'id': r.id,
-                'content': r.content,
-                'document_id': str(r.document_id),
-                'h1': r.h1,
-                'h2': r.h2,
-                'h3': r.h3,
-                'chunk_index': r.chunk_index,
-                'section_id': r.section_id,
-                'sub_chunk_id': r.sub_chunk_id,
-                'metadata': r.meta_data,
-                'score': float(r.rank) if r.rank else 0.0
-            }
-            for r in results
-        ]
     
     def semantic_search(
         self, 
         query: str, 
         k: int = 10,
-        document_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Semantic search using pgvector cosine similarity
+        Semantic search on child_chunks using pgvector cosine similarity
+        Filter by summary_ids if provided for scoped search
         """
         # Generate query embedding
         query_embedding = self.embedding_service.embed_text(query)
         
-        # Base query with cosine distance (pgvector accepts list directly)
+        # Base query with cosine distance
         base_query = self.db.query(
-            Chunk.id,
-            Chunk.content,
-            Chunk.document_id,
-            Chunk.h1,
-            Chunk.h2,
-            Chunk.h3,
-            Chunk.chunk_index,
-            Chunk.section_id,
-            Chunk.sub_chunk_id,
-            Chunk.meta_data,
-            (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
+            ChildChunk.id,
+            ChildChunk.content,
+            ChildChunk.document_id,
+            ChildChunk.parent_id,
+            ChildChunk.summary_id,
+            ChildChunk.h1,
+            ChildChunk.h2,
+            ChildChunk.h3,
+            ChildChunk.chunk_index,
+            ChildChunk.section_id,
+            ChildChunk.sub_chunk_id,
+            ChildChunk.meta_data,
+            (1 - ChildChunk.embedding.cosine_distance(query_embedding)).label('similarity')
         )
         
-        # Filter by document_ids if provided
-        if document_ids:
-            base_query = base_query.filter(Chunk.document_id.in_(document_ids))
+        # Filter by summary_ids if provided
+        if summary_ids:
+            base_query = base_query.filter(ChildChunk.summary_id.in_(summary_ids))
+            print(f"📌 Scoped to {len(summary_ids)} summary documents")
         
         # Order by similarity and limit
         results = base_query.order_by(text('similarity DESC')).limit(k).all()
@@ -188,6 +181,8 @@ class SearchService:
                 'id': r.id,
                 'content': r.content,
                 'document_id': str(r.document_id),
+                'parent_id': r.parent_id,
+                'summary_id': str(r.summary_id) if r.summary_id else None,
                 'h1': r.h1,
                 'h2': r.h2,
                 'h3': r.h3,
@@ -209,26 +204,27 @@ class SearchService:
         bm25_k: Optional[int] = None,
         semantic_k: Optional[int] = None,
         rrf_k: int = 60,
-        document_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Hybrid search using RRF (Reciprocal Rank Fusion)
+        Hybrid search on child_chunks using RRF (Reciprocal Rank Fusion)
         Combines BM25 and semantic search results
+        Filter by summary_ids if provided for scoped search
         """
         bm25_k = bm25_k or max(k, 20)
         semantic_k = semantic_k or max(k, 20)
         
-        print(f"\n🔍 HYBRID SEARCH")
+        print(f"\n🔍 HYBRID SEARCH (Child Chunks)")
         print(f"Query: {query}")
         print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
         print(f"BM25_k={bm25_k}, Semantic_k={semantic_k}, RRF_k={rrf_k}")
         
         # Get BM25 results
-        bm25_results = self.bm25_search(query, k=bm25_k, document_ids=document_ids)
+        bm25_results = self.bm25_search(query, k=bm25_k, summary_ids=summary_ids)
         print(f"📄 BM25: {len(bm25_results)} results")
         
         # Get semantic results
-        semantic_results = self.semantic_search(query, k=semantic_k, document_ids=document_ids)
+        semantic_results = self.semantic_search(query, k=semantic_k, summary_ids=summary_ids)
         print(f"🎯 Semantic: {len(semantic_results)} results")
         
         # RRF fusion
@@ -279,7 +275,7 @@ class SearchService:
                 sd.metadata as meta_data,
                 paradedb.score(sd.id) as rank
             FROM summary_documents sd
-            WHERE sd.id @@@ paradedb.parse(:query_text)
+            WHERE summary_content @@@ :query_text
             ORDER BY rank DESC
             LIMIT :limit_k
         """)
@@ -304,6 +300,8 @@ class SearchService:
             ]
         except Exception as e:
             print(f"❌ BM25 Summary search error: {e}")
+            # Rollback transaction on error
+            self.db.rollback()
             return []
     
     def semantic_search_summaries(

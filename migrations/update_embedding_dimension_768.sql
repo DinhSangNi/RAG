@@ -5,10 +5,10 @@
 -- WARNING: This will drop existing embeddings! Re-process documents after migration.
 
 -- Drop existing vector column
-ALTER TABLE chunks DROP COLUMN IF EXISTS embedding;
+ALTER TABLE child_chunks DROP COLUMN IF EXISTS embedding;
 
 -- Recreate vector column with new dimension (768)
-ALTER TABLE chunks ADD COLUMN embedding vector(768);
+ALTER TABLE child_chunks ADD COLUMN embedding vector(768);
 
 -- Add comment for documentation
-COMMENT ON COLUMN chunks.embedding IS 'Vector embedding with 768 dimensions using gemini-embedding-001';
+COMMENT ON COLUMN child_chunks.embedding IS 'Vector embedding with 768 dimensions using gemini-embedding-001';

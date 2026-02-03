@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     
     # Google AI
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL_NAME: str = "gemini-2.5-flash-lite"
     # Sử dụng gemini-embedding-001 với Matryoshka truncation về 768 dimensions
     # Model tạo 3072d nhưng truncate về 768d để tiết kiệm storage
     EMBEDDING_MODEL_NAME: str = "models/gemini-embedding-001"

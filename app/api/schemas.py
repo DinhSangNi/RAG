@@ -60,6 +60,26 @@ class FileUploadResult(BaseModel):
     message: Optional[str] = Field(default=None, description="Thông báo")
 
 
+class UpdateSummaryResponse(BaseModel):
+    """Response schema cho update summary API"""
+    status: str = Field(..., description="Trạng thái: updated, unchanged, duplicate")
+    summary_id: str = Field(..., description="ID của summary document (UUID)")
+    document_id: str = Field(..., description="ID của document (UUID)")
+    job_id: Optional[str] = Field(default=None, description="ID của job xử lý (nếu có)")
+    message: str = Field(..., description="Thông báo")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "updated",
+                "summary_id": "550e8400-e29b-41d4-a716-446655440000",
+                "document_id": "660e8400-e29b-41d4-a716-446655440001",
+                "job_id": "update_abc123",
+                "message": "Summary document đang được cập nhật"
+            }
+        }
+
+
 class MultiFileUploadResponse(BaseModel):
     """Response schema cho multi-file upload"""
     total_files: int = Field(..., description="Tổng số files được upload")
