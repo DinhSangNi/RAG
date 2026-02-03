@@ -118,7 +118,7 @@ class SummaryDocument(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     
     # Summary content
-    content = Column(Text, nullable=False)
+    summary_content = Column(Text, nullable=False)
     
     # Content hash for duplicate detection
     content_hash = Column(String(64), nullable=True, index=True)  # SHA256 hash
