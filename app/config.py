@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # Model tạo 3072d nhưng truncate về 768d để tiết kiệm storage
     EMBEDDING_MODEL_NAME: str = "models/gemini-embedding-001"
     DIMENSION_OF_MODEL: int = 768
+    GEMINI_MODEL_NAME: str = "gemini-2.5-flash-lite"
     
     # Pinecone (Legacy - optional, for backward compatibility)
     PINECONE_API_KEY: Optional[str] = None

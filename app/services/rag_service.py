@@ -20,7 +20,7 @@ class RAGService:
     def __init__(
         self,
         db: Session,
-        model_name: str = "gemini-2.0-flash-exp",
+        model_name: str = settings.GEMINI_MODEL_NAME,
         temperature: float = 0.1,
         top_k: int = 20,
         bm25_weight: float = 0.6,
@@ -142,6 +142,23 @@ CONTEXT:
                 "context": context
             })
             
+            # Clean response - handle markdown code blocks
+            raw = raw.strip()
+            if raw.startswith("```json"):
+                raw = raw[7:]
+            elif raw.startswith("```"):
+                raw = raw[3:]
+            
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            
+            raw = raw.strip()
+            
+            # Handle empty response
+            if not raw:
+                print(f"⚠️ Entity extraction: Empty response from LLM")
+                return {"entity": "", "aliases": [], "keywords": []}
+            
             # Try to parse JSON
             data = json.loads(raw)
             entity = (data.get("entity") or "").strip()
@@ -161,6 +178,10 @@ CONTEXT:
                 "aliases": aliases,
                 "keywords": keywords
             }
+        except json.JSONDecodeError as e:
+            print(f"⚠️ Entity extraction failed - Invalid JSON: {e}")
+            print(f"   Raw response: {raw[:200] if raw else '(empty)'}...")
+            return {"entity": "", "aliases": [], "keywords": []}
         except Exception as e:
             print(f"⚠️ Entity extraction failed: {e}")
             return {"entity": "", "aliases": [], "keywords": []}
