@@ -61,6 +61,25 @@ class SearchService:
             self._auto_stopwords = self._build_auto_stopwords()
         return self._auto_stopwords
     
+    @staticmethod
+    def _normalize_query_for_bm25(query: str) -> str:
+        """
+        Normalize query for ParadeDB BM25 search
+        Removes special characters that break paradedb.parse()
+        """
+        if not query:
+            return ""
+        
+        # Remove special characters that break ParadeDB parse
+        # Keep only alphanumeric, Vietnamese characters, and spaces
+        # ParadeDB parse() expects clean text without punctuation
+        normalized = re.sub(r'[^\w\sÀ-ỹ]', ' ', query, flags=re.UNICODE)
+        
+        # Remove extra whitespace
+        normalized = ' '.join(normalized.split())
+        
+        return normalized.strip()
+    
     def bm25_search(
         self, 
         query: str, 
@@ -71,7 +90,15 @@ class SearchService:
         BM25 search using ParadeDB pg_search extension
         Native BM25 implementation with better multi-language support
         """
-        print(f"🔍 BM25 query: {query}")
+        print(f"🔍 BM25 query (original): {query}")
+        
+        # Normalize query to handle special characters
+        normalized_query = self._normalize_query_for_bm25(query)
+        print(f"🔍 BM25 query (normalized): {normalized_query}")
+        
+        if not normalized_query:
+            print("⚠️ BM25: Empty query after normalization")
+            return []
         
         # Build ParadeDB search query
         # Use the BM25 index created on chunks table
@@ -98,7 +125,7 @@ class SearchService:
         try:
             results = self.db.execute(
                 search_query, 
-                {"query_text": query, "limit_k": k}
+                {"query_text": normalized_query, "limit_k": k}
             ).fetchall()
             
             print(f"📊 BM25 raw results: {len(results)} chunks")
