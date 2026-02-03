@@ -45,7 +45,7 @@ class JobResponse(BaseModel):
                 "job_id": "abc123xyz",
                 "status": "processing",
                 "message": "Đang xử lý file...",
-                "document_id": 1,
+                "document_id": "550e8400-e29b-41d4-a716-446655440000",
                 "progress": {"current": 50, "total": 100}
             }
         }

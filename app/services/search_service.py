@@ -319,9 +319,12 @@ class SearchService:
         results = self.db.query(
             SummaryDocument.id,
             SummaryDocument.summary_content,
-            SummaryDocument.document_id,
+            document_summary_association.document_id,
             SummaryDocument.meta_data,
             (1 - SummaryDocument.embedding.cosine_distance(query_embedding)).label('similarity')
+        ).join(
+            document_summary_association, 
+            SummaryDocument.id == document_summary_association.c.summary_id
         ).order_by(text('similarity DESC')).limit(k).all()
         
         return [

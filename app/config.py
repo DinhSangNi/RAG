@@ -10,13 +10,13 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database
-    DATABASE_URL: str = "postgresql://rag_user:rag_password@127.0.0.1:5433/rag_db"
+    DATABASE_URL: str = "postgresql://rag_user:Abc%40123456@ragdb1.postgres.database.azure.com:5432/rag_db?sslmode=require"
     
     # Redis
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
+    REDIS_HOST: str = "redis-17890.c282.east-us-mz.azure.cloud.redislabs.com"
+    REDIS_PORT: int = 17890
     REDIS_DB: int = 0
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://:f5iGScK0SIB9SKfUdpmiUCBhunjyluOB@redis-17890.c282.east-us-mz.azure.cloud.redislabs.com:17890/0"
     
     # Google AI
     GEMINI_API_KEY: str = ""
