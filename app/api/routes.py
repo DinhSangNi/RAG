@@ -438,17 +438,21 @@ async def rag_chat(
     """
     RAG chat with advanced retrieval and answer generation
     """
-    rag_service = get_rag_service(db)
-    
-    result = rag_service.chat(
-        question=request.question,
-        document_ids=request.document_ids,
-        verbose=request.verbose
-    )
-    
-    return ChatResponse(
-        question=request.question,
-        answer=result['answer'],
-        metadata=result['metadata']
-    )
+    try:
+        rag_service = get_rag_service(db)
+        
+        result = rag_service.chat(
+            question=request.question,
+            document_ids=request.document_ids,
+            verbose=request.verbose
+        )
+        
+        return ChatResponse(
+            question=request.question,
+            answer=result['answer'],
+            metadata=result['metadata']
+        )
+    except Exception as e:
+        db.rollback() # Giải phóng transaction bị lỗi
+        raise HTTPException(status_code=500, detail=str(e))
 
