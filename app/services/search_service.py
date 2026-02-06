@@ -147,7 +147,8 @@ class SearchService:
         try:
             query_embedding = self.embedding_service.embed_text(query)
             
-            # Đảm bảo dùng Chunk.metadata thay vì Chunk.meta_data nếu Model định nghĩa vậy
+            # Sử dụng Chunk.__table__.c.metadata để chỉ định rõ đây là CỘT 'metadata'
+            # Hoặc nếu trong models.py bạn đặt tên là 'meta_data' thì dùng Chunk.meta_data
             base_query = self.db.query(
                 Chunk.id,
                 Chunk.content,
@@ -158,7 +159,7 @@ class SearchService:
                 Chunk.chunk_index,
                 Chunk.section_id,
                 Chunk.sub_chunk_id,
-                Chunk.metadata,
+                Chunk.__table__.c.metadata.label('data_meta'), # Đổi label để tránh trùng tên
                 (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
             )
             
@@ -178,7 +179,7 @@ class SearchService:
                     'chunk_index': r.chunk_index,
                     'section_id': r.section_id,
                     'sub_chunk_id': r.sub_chunk_id,
-                    'metadata': r.metadata if r.metadata is not None else {},
+                    'metadata': r.data_meta if r.data_meta is not None else {},
                     'score': float(r.similarity) if r.similarity is not None else 0.0
                 }
                 for r in results
@@ -186,12 +187,6 @@ class SearchService:
         except Exception as e:
             print(f"❌ Semantic Search Error: {e}")
             self.db.rollback()
-            return []
-
-        except Exception as e:
-            # QUAN TRỌNG: Nếu gặp lỗi (đặc biệt là lỗi transaction từ BM25), phải rollback ngay
-            print(f"❌ Semantic Search Error: {e}")
-            self.db.rollback() 
             return []
     
     def hybrid_search(
