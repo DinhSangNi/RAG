@@ -118,13 +118,14 @@ CONTEXT:
     def _format_docs(self, docs: List[Dict[str, Any]]) -> str:
         """Format documents for context"""
         if not docs:
-            return "Không tìm thấy thông tin liên quan trong tài liệu."
+            return "Không tìm thấy tài liệu liên quan trong cơ sở dữ liệu."
         
         formatted = []
         for i, doc in enumerate(docs, 1):
-            header = doc.get('h2') or doc.get('h1') or ''
-            content = doc.get('content', '')
-            formatted.append(f"--- Đoạn {i} | {header} ---\n{content}")
+            content = doc.get('content') or "Nội dung trống"
+            # Ưu tiên lấy H2, không có thì lấy H1
+            title = doc.get('h2') or doc.get('h1') or f"Tài liệu {i}"
+            formatted.append(f"--- {title} ---\n{content}")
         
         return "\n\n".join(formatted)
     

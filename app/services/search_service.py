@@ -6,7 +6,7 @@ import re
 import math
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text, func
+from sqlalchemy import text, func, literal_column
 from app.database.models import Chunk, Document
 from app.services.embedding_service import get_embedding_service
 
@@ -42,7 +42,7 @@ class SearchService:
         df: Dict[str, int] = {}
         
         for chunk in chunks:
-            content = str(chunk.content) if chunk.content else ""  # type: ignore[arg-type]
+            content = str(chunk.content) if chunk.content else "" 
             tokens = set(self._tokenize_vi(content))
             for t in tokens:
                 df[t] = df.get(t, 0) + 1
@@ -80,102 +80,6 @@ class SearchService:
         
         return normalized.strip()
     
-    def bm25_search(
-        self, 
-        query: str, 
-        k: int = 10,
-        document_ids: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        BM25 search using ParadeDB pg_search extension
-        Native BM25 implementation with better multi-language support
-        """
-        print(f"🔍 BM25 query (original): {query}")
-        
-        # Normalize query to handle special characters
-        normalized_query = self._normalize_query_for_bm25(query)
-        print(f"🔍 BM25 query (normalized): {normalized_query}")
-        
-        if not normalized_query:
-            print("⚠️ BM25: Empty query after normalization")
-            return []
-        
-        # Build ParadeDB search query
-        # Use the BM25 index created on chunks table
-        search_query = text("""
-            SELECT 
-                c.id,
-                c.content,
-                c.document_id,
-                c.h1,
-                c.h2,
-                c.h3,
-                c.chunk_index,
-                c.section_id,
-                c.sub_chunk_id,
-                c.metadata as meta_data,
-                paradedb.score(c.id) as rank
-            FROM chunks c
-            WHERE c.id @@@ paradedb.parse(:query_text)
-            ORDER BY rank DESC
-            LIMIT :limit_k
-        """)
-        
-        # Execute query
-        try:
-            results = self.db.execute(
-                search_query, 
-                {"query_text": normalized_query, "limit_k": k}
-            ).fetchall()
-            
-            print(f"📊 BM25 raw results: {len(results)} chunks")
-            
-            return [
-                {
-                    'id': r.id,
-                    'content': r.content,
-                    'document_id': str(r.document_id),
-                    'h1': r.h1,
-                    'h2': r.h2,
-                    'h3': r.h3,
-                    'chunk_index': r.chunk_index,
-                    'section_id': r.section_id,
-                    'sub_chunk_id': r.sub_chunk_id,
-                    'metadata': r.meta_data,
-                    'score': float(r.rank) if r.rank else 0.0
-                }
-                for r in results
-            ]
-        except Exception as e:
-            print(f"❌ BM25 search error: {e}")
-            return []
-        
-        # Filter by document_ids if provided
-        if document_ids:
-            base_query = base_query.filter(Chunk.document_id.in_(document_ids))
-        
-        # Order by rank and limit
-        results = base_query.order_by(text('rank DESC')).limit(k).all()
-        
-        print(f"📊 BM25 raw results: {len(results)} chunks")
-        
-        return [
-            {
-                'id': r.id,
-                'content': r.content,
-                'document_id': str(r.document_id),
-                'h1': r.h1,
-                'h2': r.h2,
-                'h3': r.h3,
-                'chunk_index': r.chunk_index,
-                'section_id': r.section_id,
-                'sub_chunk_id': r.sub_chunk_id,
-                'metadata': r.meta_data,
-                'score': float(r.rank) if r.rank else 0.0
-            }
-            for r in results
-        ]
-    
     def semantic_search(
         self, 
         query: str, 
@@ -183,110 +87,60 @@ class SearchService:
         document_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Semantic search using pgvector cosine similarity
+        Tìm kiếm ngữ nghĩa thuần túy bằng pgvector
         """
-        # Generate query embedding
-        query_embedding = self.embedding_service.embed_text(query)
-        
-        # Base query with cosine distance (pgvector accepts list directly)
-        base_query = self.db.query(
-            Chunk.id,
-            Chunk.content,
-            Chunk.document_id,
-            Chunk.h1,
-            Chunk.h2,
-            Chunk.h3,
-            Chunk.chunk_index,
-            Chunk.section_id,
-            Chunk.sub_chunk_id,
-            Chunk.meta_data,
-            (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
-        )
-        
-        # Filter by document_ids if provided
-        if document_ids:
-            base_query = base_query.filter(Chunk.document_id.in_(document_ids))
-        
-        # Order by similarity and limit
-        results = base_query.order_by(text('similarity DESC')).limit(k).all()
-        
-        return [
-            {
-                'id': r.id,
-                'content': r.content,
-                'document_id': str(r.document_id),
-                'h1': r.h1,
-                'h2': r.h2,
-                'h3': r.h3,
-                'chunk_index': r.chunk_index,
-                'section_id': r.section_id,
-                'sub_chunk_id': r.sub_chunk_id,
-                'metadata': r.meta_data,
-                'score': float(r.similarity) if r.similarity else 0.0
-            }
-            for r in results
-        ]
+        try:
+            # 1. Tạo embedding từ query
+            query_embedding = self.embedding_service.embed_text(query)
+            
+            # 2. Query dùng literal_column để tránh xung đột với thuộc tính .metadata của SQLAlchemy
+            base_query = self.db.query(
+                Chunk.id,
+                Chunk.content,
+                Chunk.document_id,
+                Chunk.h1,
+                Chunk.h2,
+                Chunk.h3,
+                Chunk.chunk_index,
+                Chunk.section_id,
+                Chunk.sub_chunk_id,
+                literal_column("metadata").label("data_meta"), # Ép lấy cột metadata từ DB
+                (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
+            )
+            
+            # 3. Metadata Filtering (Lọc theo danh sách document_ids nếu có)
+            if document_ids:
+                base_query = base_query.filter(Chunk.document_id.in_(document_ids))
+            
+            # 4. Sắp xếp theo similarity
+            results = base_query.order_by(text('similarity DESC')).limit(k).all()
+            
+            # 5. Format kết quả trả về
+            return [
+                {
+                    'id': r.id,
+                    'content': r.content or "",
+                    'document_id': str(r.document_id),
+                    'h1': r.h1 or "",
+                    'h2': r.h2 or "",
+                    'h3': r.h3 or "",
+                    'chunk_index': r.chunk_index,
+                    'metadata': r.data_meta if r.data_meta is not None else {},
+                    'score': float(r.similarity) if r.similarity is not None else 0.0
+                }
+                for r in results
+            ]
+        except Exception as e:
+            print(f"❌ Semantic Search Error: {e}")
+            self.db.rollback() # Giải phóng transaction ngay khi lỗi
+            return []
     
-    def hybrid_search(
-        self,
-        query: str,
-        k: int = 10,
-        bm25_weight: float = 0.5,
-        semantic_weight: float = 0.5,
-        bm25_k: Optional[int] = None,
-        semantic_k: Optional[int] = None,
-        rrf_k: int = 60,
-        document_ids: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+    def hybrid_search(self, query: str, k: int = 10, document_ids: Optional[List[str]] = None, **kwargs):
         """
-        Hybrid search using RRF (Reciprocal Rank Fusion)
-        Combines BM25 and semantic search results
+        Đã hạ cấp xuống chỉ còn Semantic Search để chạy ổn định trên Azure
         """
-        bm25_k = bm25_k or max(k, 20)
-        semantic_k = semantic_k or max(k, 20)
-        
-        print(f"\n🔍 HYBRID SEARCH")
-        print(f"Query: {query}")
-        print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
-        print(f"BM25_k={bm25_k}, Semantic_k={semantic_k}, RRF_k={rrf_k}")
-        
-        # Get BM25 results
-        bm25_results = self.bm25_search(query, k=bm25_k, document_ids=document_ids)
-        print(f"📄 BM25: {len(bm25_results)} results")
-        
-        # Get semantic results
-        semantic_results = self.semantic_search(query, k=semantic_k, document_ids=document_ids)
-        print(f"🎯 Semantic: {len(semantic_results)} results")
-        
-        # RRF fusion
-        scores: Dict[int, Dict[str, Any]] = {}
-        
-        # Add BM25 scores
-        for rank, doc in enumerate(bm25_results, start=1):
-            doc_id = doc['id']
-            scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
-            scores[doc_id]['score'] += bm25_weight * (1.0 / (rrf_k + rank))
-        
-        # Add semantic scores
-        for rank, doc in enumerate(semantic_results, start=1):
-            doc_id = doc['id']
-            scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
-            scores[doc_id]['score'] += semantic_weight * (1.0 / (rrf_k + rank))
-        
-        # Sort by fused score
-        fused = sorted(scores.values(), key=lambda x: x['score'], reverse=True)
-        results = [x['doc'] for x in fused[:k]]
-        
-        # Add fused score to results
-        for i, result in enumerate(results):
-            result['fused_score'] = fused[i]['score']
-        
-        print(f"✅ Fused: {len(results)} results")
-        if results:
-            print(f"Top result: {results[0].get('h1', '')} / {results[0].get('h2', '')}")
-            print(f"Top scores: {[round(r.get('fused_score', 0), 4) for r in results[:3]]}")
-        
-        return results
+        print(f"🎯 Thực hiện Semantic Search cho: {query}")
+        return self.semantic_search(query, k=k, document_ids=document_ids)
 
 
 def get_search_service(db: Session) -> SearchService:
