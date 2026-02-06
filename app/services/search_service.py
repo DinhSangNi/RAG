@@ -87,50 +87,38 @@ class SearchService:
         document_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        BM25 search using ParadeDB pg_search extension
-        Native BM25 implementation with better multi-language support
+        Thay thế BM25 bằng Postgres Native Full Text Search
         """
-        print(f"🔍 BM25 query (original): {query}")
+        print(f"🔍 FTS query: {query}")
         
-        # Normalize query to handle special characters
-        normalized_query = self._normalize_query_for_bm25(query)
-        print(f"🔍 BM25 query (normalized): {normalized_query}")
+        # Chuẩn hóa query cho to_tsquery (chuyển space thành & để tìm khớp tất cả từ)
+        clean_query = self._normalize_query_for_bm25(query)
+        formatted_query = " & ".join(clean_query.split())
         
-        if not normalized_query:
-            print("⚠️ BM25: Empty query after normalization")
+        if not formatted_query:
             return []
-        
-        # Build ParadeDB search query
-        # Use the BM25 index created on chunks table
+
+        # Query sử dụng ts_rank để có điểm số thực tế cho RRF
         search_query = text("""
             SELECT 
-                c.id,
-                c.content,
-                c.document_id,
-                c.h1,
-                c.h2,
-                c.h3,
-                c.chunk_index,
-                c.section_id,
-                c.sub_chunk_id,
-                c.metadata as meta_data,
-                paradedb.score(c.id) as rank
+                c.id, c.content, c.document_id, c.h1, c.h2, c.h3,
+                c.chunk_index, c.section_id, c.sub_chunk_id,
+                c.meta_data,
+                ts_rank(to_tsvector('simple', COALESCE(c.content, '')), to_tsquery('simple', :query_text)) as rank
             FROM chunks c
-            WHERE c.id @@@ paradedb.parse(:query_text)
+            WHERE to_tsvector('simple', COALESCE(c.content, '')) @@ to_tsquery('simple', :query_text)
+            """ + ("AND c.document_id = ANY(:doc_ids) " if document_ids else "") + """
             ORDER BY rank DESC
             LIMIT :limit_k
         """)
         
-        # Execute query
         try:
-            results = self.db.execute(
-                search_query, 
-                {"query_text": normalized_query, "limit_k": k}
-            ).fetchall()
+            params = {"query_text": formatted_query, "limit_k": k}
+            if document_ids:
+                params["doc_ids"] = document_ids
+                
+            results = self.db.execute(search_query, params).fetchall()
             
-            print(f"📊 BM25 raw results: {len(results)} chunks")
-            
-            # CHỖ NÀY LÀ QUAN TRỌNG: Trả về list dict ngay lập tức và THOÁT HÀM
             return [
                 {
                     'id': r.id,
@@ -148,7 +136,7 @@ class SearchService:
                 for r in results
             ]
         except Exception as e:
-            print(f"❌ BM25 search error: {e}")
+            print(f"❌ FTS search error: {e}")
             return []
     
     def semantic_search(
@@ -206,47 +194,43 @@ class SearchService:
         self,
         query: str,
         k: int = 10,
-        bm25_weight: float = 0.5,
-        semantic_weight: float = 0.5,
-        bm25_k: Optional[int] = None,
-        semantic_k: Optional[int] = None,
-        rrf_k: int = 60,
-        document_ids: Optional[List[str]] = None
+        document_ids: Optional[List[str]] = None, # Metadata Filtering ở đây
+        **kwargs
     ) -> List[Dict[str, Any]]:
         """
         Hybrid search using RRF (Reciprocal Rank Fusion)
         Combines BM25 and semantic search results
         """
-        bm25_k = bm25_k or max(k, 20)
-        semantic_k = semantic_k or max(k, 20)
+        bm25_res = self.bm25_search(query, k=k, document_ids=document_ids)
+        semantic_res = self.semantic_search(query, k=k, document_ids=document_ids)
         
         print(f"\n🔍 HYBRID SEARCH")
         print(f"Query: {query}")
-        print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
-        print(f"BM25_k={bm25_k}, Semantic_k={semantic_k}, RRF_k={rrf_k}")
+        # print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
+        # print(f"BM25_k={bm25_k}, Semantic_k={semantic_k}, RRF_k={rrf_k}")
         
         # Get BM25 results
-        bm25_results = self.bm25_search(query, k=bm25_k, document_ids=document_ids)
-        print(f"📄 BM25: {len(bm25_results)} results")
+        # bm25_results = self.bm25_search(query, k=bm25_k, document_ids=document_ids)
+        # print(f"📄 BM25: {len(bm25_results)} results")
         
         # Get semantic results
-        semantic_results = self.semantic_search(query, k=semantic_k, document_ids=document_ids)
-        print(f"🎯 Semantic: {len(semantic_results)} results")
+        # semantic_results = self.semantic_search(query, k=semantic_k, document_ids=document_ids)
+        # print(f"🎯 Semantic: {len(semantic_results)} results")
         
         # RRF fusion
         scores: Dict[int, Dict[str, Any]] = {}
         
         # Add BM25 scores
-        for rank, doc in enumerate(bm25_results, start=1):
-            doc_id = doc['id']
-            scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
-            scores[doc_id]['score'] += bm25_weight * (1.0 / (rrf_k + rank))
+        # for rank, doc in enumerate(bm25_results, start=1):
+        #     doc_id = doc['id']
+        #     scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
+        #     scores[doc_id]['score'] += bm25_weight * (1.0 / (rrf_k + rank))
         
         # Add semantic scores
-        for rank, doc in enumerate(semantic_results, start=1):
-            doc_id = doc['id']
-            scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
-            scores[doc_id]['score'] += semantic_weight * (1.0 / (rrf_k + rank))
+        # for rank, doc in enumerate(semantic_results, start=1):
+        #     doc_id = doc['id']
+        #     scores.setdefault(doc_id, {'doc': doc, 'score': 0.0})
+        #     scores[doc_id]['score'] += semantic_weight * (1.0 / (rrf_k + rank))
         
         # Sort by fused score
         fused = sorted(scores.values(), key=lambda x: x['score'], reverse=True)
