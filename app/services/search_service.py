@@ -134,14 +134,110 @@ class SearchService:
             print(f"❌ Semantic Search Error: {e}")
             self.db.rollback() # Giải phóng transaction ngay khi lỗi
             return []
-    
-    def hybrid_search(self, query: str, k: int = 10, document_ids: Optional[List[str]] = None, **kwargs):
-        """
-        Đã hạ cấp xuống chỉ còn Semantic Search để chạy ổn định trên Azure
-        """
-        print(f"🎯 Thực hiện Semantic Search cho: {query}")
-        return self.semantic_search(query, k=k, document_ids=document_ids)
 
+    def fts_search(
+        self, 
+        query: str, 
+        k: int = 10,
+        document_ids: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Thay thế BM25 bằng PostgreSQL Native Full Text Search
+        """
+        try:
+            # Chuẩn hóa query: Duy Tân là ai -> Duy & Tân & là & ai
+            # Dùng toán tử & (AND) hoặc | (OR) tùy nhu cầu
+            clean_query = self._normalize_query_for_bm25(query)
+            formatted_query = " | ".join(clean_query.split())
+            
+            if not formatted_query:
+                return []
+
+            # SQL sử dụng ts_rank để lấy điểm số tương tự BM25
+            search_query = text("""
+                SELECT 
+                    c.id, c.content, c.document_id, c.h1, c.h2, c.h3,
+                    c.chunk_index,
+                    literal_column("metadata").label("data_meta"),
+                    ts_rank(c.search_vector, to_tsquery('simple', :query_text)) as rank_score
+                FROM chunks c
+                WHERE c.search_vector @@ to_tsquery('simple', :query_text)
+                """ + ("AND c.document_id = ANY(:doc_ids) " if document_ids else "") + """
+                ORDER BY rank_score DESC
+                LIMIT :limit_k
+            """)
+            
+            params = {"query_text": formatted_query, "limit_k": k}
+            if document_ids:
+                params["doc_ids"] = document_ids
+                
+            results = self.db.execute(search_query, params).fetchall()
+            
+            return [
+                {
+                    'id': r.id,
+                    'content': r.content,
+                    'score': float(r.rank_score),
+                    # ... các trường khác giữ nguyên ...
+                }
+                for r in results
+            ]
+        except Exception as e:
+            print(f"❌ FTS Error: {e}")
+            self.db.rollback()
+            return []
+    
+    def hybrid_search(
+        self, 
+        query: str, 
+        k: int = 10, 
+        document_ids: Optional[List[str]] = None, 
+        alpha: float = 0.5, # Trọng số giữa 2 phương pháp
+        **kwargs
+    ):        
+        """
+        Hybrid Search kết hợp FTS (Native Azure/Postgres) và Semantic Search (pgvector)
+        Sử dụng thuật toán RRF (Reciprocal Rank Fusion)
+        """
+        print(f"🔍 Thực hiện Hybrid Search cho: {query}")
+        
+        # 1. Chạy song song hoặc tuần tự 2 phương pháp
+        fts_results = self.fts_search(query, k=k*2, document_ids=document_ids)
+        semantic_results = self.semantic_search(query, k=k*2, document_ids=document_ids)
+        
+        # 2. Thuật toán RRF để gộp kết quả
+        rrf_scores = {} # {doc_id: score}
+        doc_map = {}    # {doc_id: doc_object}
+        
+        # RRF Constant (thường là 60)
+        K_RRF = 60
+        
+        # Tính điểm cho Full Text Search
+        for rank, doc in enumerate(fts_results):
+            doc_id = doc['id']
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + (1.0 / (K_RRF + rank + 1))
+            doc_map[doc_id] = doc
+            
+        # Tính điểm cho Semantic Search
+        for rank, doc in enumerate(semantic_results):
+            doc_id = doc['id']
+            # RRF score cộng dồn
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + (1.0 / (K_RRF + rank + 1))
+            # Nếu doc này chưa có trong map (từ FTS), thì thêm vào
+            if doc_id not in doc_map:
+                doc_map[doc_id] = doc
+
+        # 3. Sắp xếp lại dựa trên điểm RRF tổng hợp
+        sorted_ids = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+        
+        final_results = []
+        for doc_id, score in sorted_ids[:k]:
+            doc = doc_map[doc_id]
+            doc['hybrid_score'] = score # Gán điểm mới
+            final_results.append(doc)
+            
+        print(f"✅ Hybrid Search hoàn tất: tìm thấy {len(final_results)} kết quả")
+        return final_results
 
 def get_search_service(db: Session) -> SearchService:
     """Factory function for SearchService"""
