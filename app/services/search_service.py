@@ -87,23 +87,21 @@ class SearchService:
         document_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Thay thế BM25 bằng Postgres Native Full Text Search
+        Native Postgres Full Text Search - Đã sửa tên cột metadata
         """
         print(f"🔍 FTS query: {query}")
-        
-        # Chuẩn hóa query cho to_tsquery (chuyển space thành & để tìm khớp tất cả từ)
         clean_query = self._normalize_query_for_bm25(query)
-        formatted_query = " & ".join(clean_query.split())
+        # Sử dụng '|' (OR) thay vì '&' (AND) để tăng khả năng tìm thấy kết quả nếu query dài
+        formatted_query = " | ".join(clean_query.split())
         
         if not formatted_query:
             return []
 
-        # Query sử dụng ts_rank để có điểm số thực tế cho RRF
         search_query = text("""
             SELECT 
                 c.id, c.content, c.document_id, c.h1, c.h2, c.h3,
                 c.chunk_index, c.section_id, c.sub_chunk_id,
-                c.meta_data,
+                c.metadata, -- ĐÃ SỬA: meta_data -> metadata
                 ts_rank(to_tsvector('simple', COALESCE(c.content, '')), to_tsquery('simple', :query_text)) as rank
             FROM chunks c
             WHERE to_tsvector('simple', COALESCE(c.content, '')) @@ to_tsquery('simple', :query_text)
@@ -122,22 +120,22 @@ class SearchService:
             return [
                 {
                     'id': r.id,
-                    'content': r.content,
+                    'content': r.content or "",
                     'document_id': str(r.document_id),
-                    'h1': r.h1,
-                    'h2': r.h2,
-                    'h3': r.h3,
+                    'h1': r.h1 or "",
+                    'h2': r.h2 or "",
+                    'h3': r.h3 or "",
                     'chunk_index': r.chunk_index,
                     'section_id': r.section_id,
                     'sub_chunk_id': r.sub_chunk_id,
-                    'metadata': r.meta_data,
+                    'metadata': r.metadata if r.metadata is not None else {},
                     'score': float(r.rank) if r.rank else 0.0
                 }
                 for r in results
             ]
         except Exception as e:
             print(f"❌ FTS search error: {e}")
-            self.db.rollback()  # QUAN TRỌNG: Giải phóng transaction bị lỗi
+            self.db.rollback() 
             return []
     
     def semantic_search(
@@ -146,15 +144,10 @@ class SearchService:
         k: int = 10,
         document_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
-        """
-        Semantic search sử dụng pgvector với cơ chế tự phục hồi transaction (Rollback)
-        """
         try:
-            # 1. Tạo embedding cho câu hỏi
             query_embedding = self.embedding_service.embed_text(query)
             
-            # 2. Xây dựng base query
-            # Lưu ý: Sử dụng (1 - distance) để lấy similarity score
+            # Đảm bảo dùng Chunk.metadata thay vì Chunk.meta_data nếu Model định nghĩa vậy
             base_query = self.db.query(
                 Chunk.id,
                 Chunk.content,
@@ -165,19 +158,15 @@ class SearchService:
                 Chunk.chunk_index,
                 Chunk.section_id,
                 Chunk.sub_chunk_id,
-                Chunk.meta_data,
+                Chunk.metadata,
                 (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
             )
             
-            # 3. Metadata Filtering: Lọc theo document_ids nếu có
             if document_ids:
-                # Chuyển document_ids sang list string nếu cần để khớp với kiểu dữ liệu DB
                 base_query = base_query.filter(Chunk.document_id.in_(document_ids))
             
-            # 4. Sắp xếp và lấy kết quả
             results = base_query.order_by(text('similarity DESC')).limit(k).all()
             
-            # 5. Chuyển đổi sang List[Dict] tường minh
             return [
                 {
                     'id': r.id,
@@ -189,11 +178,15 @@ class SearchService:
                     'chunk_index': r.chunk_index,
                     'section_id': r.section_id,
                     'sub_chunk_id': r.sub_chunk_id,
-                    'metadata': r.meta_data if r.meta_data is not None else {},
+                    'metadata': r.metadata if r.metadata is not None else {},
                     'score': float(r.similarity) if r.similarity is not None else 0.0
                 }
                 for r in results
             ]
+        except Exception as e:
+            print(f"❌ Semantic Search Error: {e}")
+            self.db.rollback()
+            return []
 
         except Exception as e:
             # QUAN TRỌNG: Nếu gặp lỗi (đặc biệt là lỗi transaction từ BM25), phải rollback ngay
