@@ -141,24 +141,19 @@ class SearchService:
         k: int = 10,
         document_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
-        """
-        Thay thế BM25 bằng PostgreSQL Native Full Text Search
-        """
         try:
-            # Chuẩn hóa query: Duy Tân là ai -> Duy & Tân & là & ai
-            # Dùng toán tử & (AND) hoặc | (OR) tùy nhu cầu
             clean_query = self._normalize_query_for_bm25(query)
             formatted_query = " | ".join(clean_query.split())
             
             if not formatted_query:
                 return []
 
-            # SQL sử dụng ts_rank để lấy điểm số tương tự BM25
+            # SQL thuần túy khớp với schema Azure của bạn
             search_query = text("""
                 SELECT 
                     c.id, c.content, c.document_id, c.h1, c.h2, c.h3,
-                    c.chunk_index,
-                    literal_column("metadata").label("data_meta"),
+                    c.chunk_index, c.section_id, c.sub_chunk_id,
+                    c.metadata as data_meta,
                     ts_rank(c.search_vector, to_tsquery('simple', :query_text)) as rank_score
                 FROM chunks c
                 WHERE c.search_vector @@ to_tsquery('simple', :query_text)
@@ -176,9 +171,16 @@ class SearchService:
             return [
                 {
                     'id': r.id,
-                    'content': r.content,
-                    'score': float(r.rank_score),
-                    # ... các trường khác giữ nguyên ...
+                    'content': r.content or "",
+                    'document_id': str(r.document_id),
+                    'h1': r.h1 or "",
+                    'h2': r.h2 or "",
+                    'h3': r.h3 or "",
+                    'chunk_index': r.chunk_index,
+                    'section_id': r.section_id,
+                    'sub_chunk_id': r.sub_chunk_id,
+                    'metadata': r.data_meta if r.data_meta is not None else {},
+                    'score': float(r.rank_score) if r.rank_score else 0.0
                 }
                 for r in results
             ]
