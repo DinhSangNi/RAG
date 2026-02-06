@@ -137,6 +137,7 @@ class SearchService:
             ]
         except Exception as e:
             print(f"❌ FTS search error: {e}")
+            self.db.rollback()  # QUAN TRỌNG: Giải phóng transaction bị lỗi
             return []
     
     def semantic_search(
@@ -146,49 +147,59 @@ class SearchService:
         document_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Semantic search using pgvector cosine similarity
+        Semantic search sử dụng pgvector với cơ chế tự phục hồi transaction (Rollback)
         """
-        # Generate query embedding
-        query_embedding = self.embedding_service.embed_text(query)
-        
-        # Base query with cosine distance (pgvector accepts list directly)
-        base_query = self.db.query(
-            Chunk.id,
-            Chunk.content,
-            Chunk.document_id,
-            Chunk.h1,
-            Chunk.h2,
-            Chunk.h3,
-            Chunk.chunk_index,
-            Chunk.section_id,
-            Chunk.sub_chunk_id,
-            Chunk.meta_data,
-            (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
-        )
-        
-        # Filter by document_ids if provided
-        if document_ids:
-            base_query = base_query.filter(Chunk.document_id.in_(document_ids))
-        
-        # Order by similarity and limit
-        results = base_query.order_by(text('similarity DESC')).limit(k).all()
-        
-        return [
-            {
-                'id': r.id,
-                'content': r.content,
-                'document_id': str(r.document_id),
-                'h1': r.h1,
-                'h2': r.h2,
-                'h3': r.h3,
-                'chunk_index': r.chunk_index,
-                'section_id': r.section_id,
-                'sub_chunk_id': r.sub_chunk_id,
-                'metadata': r.meta_data,
-                'score': float(r.similarity) if r.similarity else 0.0
-            }
-            for r in results
-        ]
+        try:
+            # 1. Tạo embedding cho câu hỏi
+            query_embedding = self.embedding_service.embed_text(query)
+            
+            # 2. Xây dựng base query
+            # Lưu ý: Sử dụng (1 - distance) để lấy similarity score
+            base_query = self.db.query(
+                Chunk.id,
+                Chunk.content,
+                Chunk.document_id,
+                Chunk.h1,
+                Chunk.h2,
+                Chunk.h3,
+                Chunk.chunk_index,
+                Chunk.section_id,
+                Chunk.sub_chunk_id,
+                Chunk.meta_data,
+                (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
+            )
+            
+            # 3. Metadata Filtering: Lọc theo document_ids nếu có
+            if document_ids:
+                # Chuyển document_ids sang list string nếu cần để khớp với kiểu dữ liệu DB
+                base_query = base_query.filter(Chunk.document_id.in_(document_ids))
+            
+            # 4. Sắp xếp và lấy kết quả
+            results = base_query.order_by(text('similarity DESC')).limit(k).all()
+            
+            # 5. Chuyển đổi sang List[Dict] tường minh
+            return [
+                {
+                    'id': r.id,
+                    'content': r.content or "",
+                    'document_id': str(r.document_id),
+                    'h1': r.h1 or "",
+                    'h2': r.h2 or "",
+                    'h3': r.h3 or "",
+                    'chunk_index': r.chunk_index,
+                    'section_id': r.section_id,
+                    'sub_chunk_id': r.sub_chunk_id,
+                    'metadata': r.meta_data if r.meta_data is not None else {},
+                    'score': float(r.similarity) if r.similarity is not None else 0.0
+                }
+                for r in results
+            ]
+
+        except Exception as e:
+            # QUAN TRỌNG: Nếu gặp lỗi (đặc biệt là lỗi transaction từ BM25), phải rollback ngay
+            print(f"❌ Semantic Search Error: {e}")
+            self.db.rollback() 
+            return []
     
     def hybrid_search(
         self,
