@@ -48,23 +48,23 @@ class RAGService:
             convert_system_message_to_human=True
         )
         
-        # Cập nhật trong __init__
+        # Main RAG prompt
         self.prompt = ChatPromptTemplate.from_messages([
-            ("human", """Bạn là trợ lý chuyên gia phân tích tài liệu. Trả lời câu hỏi dựa trên CONTEXT được cung cấp.
+            ("human", """Bạn là trợ lý AI. Trả lời câu hỏi dựa trên CONTEXT được cung cấp.
 
-        NGUYÊN TẮC:
-        1) ƯU TIÊN: Nếu có câu trả lời trực tiếp, hãy trả lời ngắn gọn, chính xác.
-        2) NẾU DỮ LIỆU YẾU: Nếu không có câu trả lời trực tiếp nhưng CONTEXT có nhắc đến các thực thể hoặc từ khóa liên quan, hãy tóm tắt những gì tài liệu có về chúng và bắt đầu bằng: "Dựa trên tài liệu tôi tìm thấy, dù không có thông tin cụ thể về [vấn đề], nhưng có một vài chi tiết liên quan là..."
-        3) TRƯỜNG HỢP KHÔNG CÓ THÔNG TIN: Chỉ khi CONTEXT hoàn toàn không có từ khóa nào liên quan, hãy trả lời đúng câu: "Tôi không tìm thấy thông tin này trong tài liệu."
-        4) Coi các bí danh/tên gọi khác là cùng một thực thể.
-        5) Tuyệt đối không bịa đặt thông tin nằm ngoài CONTEXT.
+NGUYÊN TẮC:
+1) CHỈ trả lời dựa trên thông tin trong CONTEXT
+2) Nếu CONTEXT không có thông tin → trả lời đúng câu: "Tôi không tìm thấy thông tin này trong tài liệu."
+3) Trả lời NGẮN GỌN, CHÍNH XÁC, bằng tiếng Việt
+4) Nếu trong CONTEXT có nhiều tên gọi (bí danh / tên khai sinh / tên khác) của cùng một người, hãy coi chúng là 1 thực thể khi suy luận.
+5) Không bịa đặt.
 
-        CONTEXT:
-        {context}
+CONTEXT:
+{context}
 
-        CÂU HỎI: {question}
+CÂU HỎI: {question}
 
-        TRẢ LỜI:"""),
+TRẢ LỜI:"""),
         ])
         
         # Alias extraction prompt
@@ -106,29 +106,6 @@ CONTEXT:
         self.alias_chain = self.alias_prompt | self.llm | StrOutputParser()
         
         print("✅ RAG Service ready!")
-
-    def _calculate_confidence(self, question: str, docs: List[Dict[str, Any]], info: Dict[str, Any]) -> float:
-        """Tính toán mức độ tự tin của dữ liệu tìm được (0.0 - 1.0)"""
-        if not docs:
-            return 0.0
-        
-        # Lấy danh sách từ khóa chính từ info (do LLM trích xuất ở Pass 1)
-        keywords = info.get("keywords") or []
-        entity = info.get("entity", "")
-        all_terms = [entity.lower()] + [k.lower() for k in keywords] if entity else [k.lower() for k in keywords]
-        
-        # 1. Kiểm tra mức độ khớp từ khóa trong Context
-        context_text = " ".join([d.get('content', '').lower() for d in docs])
-        matches = sum(1 for term in all_terms if term in context_text)
-        keyword_score = matches / len(all_terms) if all_terms else 0.5
-        
-        # 2. Kiểm tra điểm RRF cao nhất (tín hiệu từ Search Engine)
-        # RRF score thường nhỏ, chúng ta có thể normalize hoặc check max_score
-        max_fused_score = docs[0].get('fused_score', 0)
-        
-        # Trọng số: 70% khớp từ khóa, 30% điểm tìm kiếm
-        confidence = (keyword_score * 0.7) + (min(max_fused_score * 10, 1.0) * 0.3)
-        return confidence
     
     @staticmethod
     def _tokenize_vi(text: str) -> List[str]:
@@ -349,42 +326,48 @@ CONTEXT:
         document_ids: Optional[List[str]] = None,
         verbose: bool = False
     ) -> Dict[str, Any]:
-        # 1. Truy hồi dữ liệu
-        # Lưu ý: Retrieve đã chạy extract_entity_info nội bộ, 
-        # nhưng để lấy info ta có thể gọi nhẹ lại hoặc refactor retrieve để trả về cả info.
-        # Ở đây tôi giả định retrieve trả về list docs như cũ.
-        docs = self.retrieve(question, document_ids=document_ids)
+        """
+        RAG chat: retrieve + generate answer
         
-        # 2. Đánh giá nhanh nội dung (Kiểm tra xem có keywords liên quan không)
-        # Bạn có thể lấy info từ logic extract_entity_info
-        # Để tối ưu, hãy lưu 'info' từ trong self.retrieve vào biến instance hoặc trả về kèm docs
+        Returns:
+            {
+                'answer': str,
+                'chunks': List[Dict],
+                'metadata': Dict
+            }
+        """
+        # Retrieve relevant chunks
+        docs = self.retrieve(question, document_ids=document_ids)
         
         if not docs:
             return {
                 'answer': "Tôi không tìm thấy thông tin này trong tài liệu.",
                 'chunks': [],
-                'metadata': {'chunks_used': 0, 'confidence': 0}
+                'metadata': {'chunks_used': 0}
             }
-
-        # 3. Sinh câu trả lời qua LLM
+        
+        if verbose:
+            print(f"\n{'='*70}\nCONTEXT:\n{'='*70}")
+            for i, doc in enumerate(docs[:5], 1):
+                print(f"\n📄 Chunk {i}:")
+                print(f"   Headers: {doc.get('h1', '')} / {doc.get('h2', '')}")
+                print(f"   Preview: {doc.get('content', '')[:200]}...")
+        
+        # Generate answer
         print("\n💬 Generating answer...")
         answer = self.rag_chain.invoke({"docs": docs, "question": question})
         answer = (answer or "").strip()
         
-        # 4. Hậu xử lý: Nếu Gemini vẫn "cứng nhắc" báo không thấy dù có data
-        # Ta có thể kiểm tra nếu answer quá ngắn và chứa phrase từ chối
-        if "không tìm thấy thông tin" in answer.lower() and len(docs) > 0:
-            # Nếu có docs nhưng Gemini từ chối, ta có thể thử một prompt "ép" tóm tắt
-            # Hoặc giữ nguyên để đảm bảo tính an toàn (tránh hallucination)
-            pass
-
+        # Normalize fallback
+        if not answer or ("không tìm thấy" in answer.lower() and "tài liệu" in answer.lower()):
+            answer = "Tôi không tìm thấy thông tin này trong tài liệu."
+        
         return {
             'answer': answer,
-            'chunks': docs[:10],
+            'chunks': docs[:10],  # Return top 10 for reference
             'metadata': {
                 'chunks_used': len(docs),
-                'model': getattr(self.llm, 'model', 'unknown'),
-                # 'confidence': confidence # Nếu bạn triển khai bước 2
+                'model': getattr(self.llm, 'model', 'unknown')
             }
         }
 
