@@ -23,8 +23,8 @@ class RAGService:
         model_name: str = settings.GEMINI_MODEL_NAME,
         temperature: float = 0.1,
         top_k: int = 20,
-        bm25_weight: float = 0.6,
-        semantic_weight: float = 0.4,
+        bm25_weight: float = 0,
+        semantic_weight: float = 1.0,
         first_pass_k: int = 12,
         variant_count: int = 5,
         rrf_k: int = 60
