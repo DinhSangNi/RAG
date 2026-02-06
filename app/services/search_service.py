@@ -138,18 +138,14 @@ class SearchService:
             self.db.rollback() 
             return []
     
-    def semantic_search(
-        self, 
-        query: str, 
-        k: int = 10,
-        document_ids: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+    def semantic_search(self, query: str, k: int = 10, document_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         try:
             query_embedding = self.embedding_service.embed_text(query)
             
-            # Sử dụng Chunk.__table__.c.metadata để chỉ định rõ đây là CỘT 'metadata'
-            # Hoặc nếu trong models.py bạn đặt tên là 'meta_data' thì dùng Chunk.meta_data
-            base_query = self.db.query(
+            # Sử dụng literal_column để ép SQLAlchemy lấy đúng tên cột trong DB
+            from sqlalchemy import literal_column
+            
+            results = self.db.query(
                 Chunk.id,
                 Chunk.content,
                 Chunk.document_id,
@@ -159,14 +155,14 @@ class SearchService:
                 Chunk.chunk_index,
                 Chunk.section_id,
                 Chunk.sub_chunk_id,
-                Chunk.__table__.c.metadata.label('data_meta'), # Đổi label để tránh trùng tên
+                literal_column("metadata").label("raw_meta"), # Lấy trực tiếp cột tên 'metadata'
                 (1 - Chunk.embedding.cosine_distance(query_embedding)).label('similarity')
             )
-            
+
             if document_ids:
-                base_query = base_query.filter(Chunk.document_id.in_(document_ids))
+                results = results.filter(Chunk.document_id.in_(document_ids))
             
-            results = base_query.order_by(text('similarity DESC')).limit(k).all()
+            results = results.order_by(text('similarity DESC')).limit(k).all()
             
             return [
                 {
@@ -177,9 +173,7 @@ class SearchService:
                     'h2': r.h2 or "",
                     'h3': r.h3 or "",
                     'chunk_index': r.chunk_index,
-                    'section_id': r.section_id,
-                    'sub_chunk_id': r.sub_chunk_id,
-                    'metadata': r.data_meta if r.data_meta is not None else {},
+                    'metadata': r.raw_meta or {},
                     'score': float(r.similarity) if r.similarity is not None else 0.0
                 }
                 for r in results
