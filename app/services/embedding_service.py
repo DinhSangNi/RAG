@@ -4,6 +4,7 @@ from pydantic import SecretStr
 import numpy as np
 from typing import List
 import os
+from google import genai
 
 
 class EmbeddingService:
@@ -14,7 +15,7 @@ class EmbeddingService:
         # Model này tạo 3072 dimensions nhưng truncate về 768 dimensions
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=settings.EMBEDDING_MODEL_NAME,
-            api_key=SecretStr(settings.GEMINI_API_KEY)
+            google_api_key=SecretStr(settings.GEMINI_API_KEY)
         )
         # Set output dimensionality for Matryoshka truncation
         self.output_dimensionality = settings.DIMENSION_OF_MODEL

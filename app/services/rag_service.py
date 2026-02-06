@@ -116,17 +116,19 @@ CONTEXT:
         return [t.lower() for t in word_pattern.findall(text)]
     
     def _format_docs(self, docs: List[Dict[str, Any]]) -> str:
-        """Format documents for context"""
-        if not docs:
-            return "Không tìm thấy thông tin liên quan trong tài liệu."
-        
         formatted = []
         for i, doc in enumerate(docs, 1):
-            header = doc.get('h2') or doc.get('h1') or ''
-            content = doc.get('content', '')
-            formatted.append(f"--- Đoạn {i} | {header} ---\n{content}")
+            # Ép kiểu dict để chắc chắn gọi được .get()
+            d = dict(doc) if not isinstance(doc, dict) else doc
+            
+            # Lấy content, nếu None thì bỏ qua đoạn này
+            content = d.get('content') or ""
+            if not content: continue 
+            
+            header = d.get('h2') or d.get('h1') or f"Đoạn {i}"
+            formatted.append(f"--- {header} ---\n{content}")
         
-        return "\n\n".join(formatted)
+        return "\n\n".join(formatted) if formatted else "Tài liệu rỗng."
     
     def _extract_entity_info(
         self, 

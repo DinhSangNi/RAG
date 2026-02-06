@@ -130,6 +130,7 @@ class SearchService:
             
             print(f"📊 BM25 raw results: {len(results)} chunks")
             
+            # CHỖ NÀY LÀ QUAN TRỌNG: Trả về list dict ngay lập tức và THOÁT HÀM
             return [
                 {
                     'id': r.id,
@@ -149,32 +150,6 @@ class SearchService:
         except Exception as e:
             print(f"❌ BM25 search error: {e}")
             return []
-        
-        # Filter by document_ids if provided
-        if document_ids:
-            base_query = base_query.filter(Chunk.document_id.in_(document_ids))
-        
-        # Order by rank and limit
-        results = base_query.order_by(text('rank DESC')).limit(k).all()
-        
-        print(f"📊 BM25 raw results: {len(results)} chunks")
-        
-        return [
-            {
-                'id': r.id,
-                'content': r.content,
-                'document_id': str(r.document_id),
-                'h1': r.h1,
-                'h2': r.h2,
-                'h3': r.h3,
-                'chunk_index': r.chunk_index,
-                'section_id': r.section_id,
-                'sub_chunk_id': r.sub_chunk_id,
-                'metadata': r.meta_data,
-                'score': float(r.rank) if r.rank else 0.0
-            }
-            for r in results
-        ]
     
     def semantic_search(
         self, 
