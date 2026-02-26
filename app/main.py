@@ -10,7 +10,7 @@ from app.config import settings
 from app.database.connection import engine, Base
 
 # Create database tables
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 # Create FastAPI application
 app = FastAPI(
