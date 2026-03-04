@@ -585,6 +585,7 @@ CÂU HỎI: {question}
             # PASS 2: Search with variants on all child chunks
             print(f"\n🔎 FALLBACK - Pass 2: Search with variants")
             all_results = [first_pass_chunks]
+            variant_results = []  # Track results for each variant
             
             for i, variant in enumerate(variants, 1):
                 print(f"Variant {i}/{len(variants)}: {variant[:60]}...")
@@ -597,6 +598,10 @@ CÂU HỎI: {question}
                     summary_ids=summary_ids
                 )
                 all_results.append(results)
+                variant_results.append({
+                    'variant': variant,
+                    'top_3_chunks': results[:3]  # Store top 3 for this variant
+                })
                 print(f"  → {len(results)} chunks")
             
             # RRF fusion
@@ -612,6 +617,8 @@ CÂU HỎI: {question}
                     'max_summary_score': max_score,
                     'chunks_returned': len(fused_chunks),
                     'variants_count': len(variants),
+                    'variants': variants,
+                    'variant_results': variant_results,
                     'fallback_mode': 'two_pass'
                 }
             }
@@ -683,6 +690,7 @@ CÂU HỎI: {question}
             # STEP 4: Search child chunks with each variant (scoped to summaries)
             print(f"\n🔎 STEP 4: Search child chunks with variants (scoped to summaries)")
             all_results = []
+            variant_results = []  # Track results for each variant
             
             for i, variant in enumerate(variants, 1):
                 print(f"Variant {i}/{len(variants)}: {variant[:60]}...")
@@ -695,6 +703,10 @@ CÂU HỎI: {question}
                     summary_ids=summary_ids
                 )
                 all_results.append(results)
+                variant_results.append({
+                    'variant': variant,
+                    'top_3_chunks': results[:3]  # Store top 3 for this variant
+                })
                 print(f"  → {len(results)} child chunks")
             
             # STEP 5: RRF fusion of all variant results
@@ -715,6 +727,8 @@ CÂU HỎI: {question}
                     'max_summary_score': max_score,
                     'sufficient': False,
                     'variants_count': len(variants),
+                    'variants': variants,
+                    'variant_results': variant_results,
                     'child_chunks_found': len(fused_child_chunks),
                     'parent_chunks_returned': len(parent_chunks),
                     'scoped_to_summaries': len(summary_ids)

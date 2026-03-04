@@ -8,7 +8,7 @@ import math
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.database.models import ChildChunk, ParentChunk, Document, SummaryDocument, child_chunk_summary_association
+from app.database.models import ChildChunk, SummaryDocument, child_chunk_summary_association
 from app.services.embedding_service import get_embedding_service
 
 
