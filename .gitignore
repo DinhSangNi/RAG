@@ -47,3 +47,6 @@ data/processed_data/
 # OS
 .DS_Store
 Thumbs.db
+
+docs/
+src/

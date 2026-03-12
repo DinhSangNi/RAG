@@ -2,12 +2,23 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (including Java for VnCoreNLP)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     postgresql-client \
+    default-jre-headless \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Pre-download VnCoreNLP JAR and word-segmenter models
+RUN mkdir -p /app/vncorenlp/models/wordsegmenter \
+    && wget -q -O /app/vncorenlp/VnCoreNLP-1.2.jar \
+        https://github.com/vncorenlp/VnCoreNLP/raw/master/VnCoreNLP-1.2.jar \
+    && wget -q -O /app/vncorenlp/models/wordsegmenter/vi-vocab \
+        https://raw.githubusercontent.com/vncorenlp/VnCoreNLP/master/models/wordsegmenter/vi-vocab \
+    && wget -q -O /app/vncorenlp/models/wordsegmenter/wordsegmenter.rdr \
+        https://raw.githubusercontent.com/vncorenlp/VnCoreNLP/master/models/wordsegmenter/wordsegmenter.rdr
 
 # Copy requirements
 COPY requirements.txt .

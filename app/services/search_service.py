@@ -8,8 +8,9 @@ import math
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.database.models import ChildChunk, ParentChunk, Document, SummaryDocument, child_chunk_summary_association
+from app.database.models import ChildChunk, SummaryDocument, child_chunk_summary_association
 from app.services.embedding_service import get_embedding_service
+from app.services.segmentation_service import get_segmentation_service
 
 
 class SearchService:
@@ -18,10 +19,19 @@ class SearchService:
     Implements Reciprocal Rank Fusion (RRF) for combining search results
     """
 
-    def __init__(self, db: Session):
+    _auto_stopwords: Optional[set] = None  # class-level cache, shared across all instances
+
+    def __init__(
+        self,
+        db: Session,
+        embedding_service=None,
+        segmentation_service=None,
+    ):
         self.db = db
-        self.embedding_service = get_embedding_service()
-        self._auto_stopwords: Optional[set] = None
+        # Accept injected singletons from the DI container; fall back to the
+        # module-level singletons for callers that don't use the container.
+        self.embedding_service = embedding_service or get_embedding_service()
+        self.segmentation_service = segmentation_service or get_segmentation_service()
 
     @staticmethod
     def _tokenize_vi(text: str) -> List[str]:
@@ -30,6 +40,16 @@ class SearchService:
         if not text:
             return []
         return [t.lower() for t in word_pattern.findall(text)]
+
+    @staticmethod
+    def _sanitize_bm25_query(query: str) -> str:
+        """Strip characters that ParadeDB BM25 parser treats as operators.
+
+        Affected chars: : ? ! ( ) { } [ ] ^ " ~ * + - / \\
+        Underscores are preserved (VnCoreNLP compound words e.g. trị_vì, Minh_Mạng).
+        """
+        sanitized = re.sub(r'[^\w\s]', ' ', query, flags=re.UNICODE)
+        return re.sub(r'\s+', ' ', sanitized).strip()
 
     def _build_auto_stopwords(
         self,
@@ -67,16 +87,17 @@ class SearchService:
         return stop
 
     def get_stopwords(self) -> set:
-        """Get or build stopwords"""
-        if self._auto_stopwords is None:
-            self._auto_stopwords = self._build_auto_stopwords()
-        return self._auto_stopwords
+        """Get or build stopwords (cached at class level across all instances)"""
+        if SearchService._auto_stopwords is None:
+            SearchService._auto_stopwords = self._build_auto_stopwords()
+        return SearchService._auto_stopwords
 
     def bm25_search(
         self,
         query: str,
         k: int = 10,
-        summary_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None,
+        use_segmentation: bool = False
     ) -> List[Dict[str, Any]]:
         """
         BM25 search on child_chunks using ParadeDB pg_search extension
@@ -85,15 +106,24 @@ class SearchService:
             query: Search query text
             k: Number of results to return
             summary_ids: Optional list of summary document IDs to scope search
+            use_segmentation: If True, segment query for better matching
+                             (content column already contains segmented text)
 
         Returns:
             List of search results with metadata
         """
-        print(f"🔍 BM25 query: {query}")
+        # Always segment query to match VnCoreNLP-segmented bm25_text tokens
+        original_query = query
+        query = self.segmentation_service.segment_query(query)
+        query = self._sanitize_bm25_query(query)
+        print(f"🔤 BM25: \"{original_query}\" → \"{query}\"")
+
+        # BM25 search on the word-segmented field
+        search_field = "bm25_text"
 
         # Build FROM clause với optional join
         from_clause = "child_chunks c"
-        where_conditions = ["content @@@ :query_text"]
+        where_conditions = [f"{search_field} @@@ :query_text"]
         params = {"query_text": query, "limit_k": k}
 
         if summary_ids:
@@ -202,7 +232,7 @@ class SearchService:
             ChildChunk.section_id,
             ChildChunk.sub_chunk_id,
             ChildChunk.meta_data,
-            (1 - ChildChunk.embedding.cosine_distance(query_embedding)).label('similarity')
+            (1 - ChildChunk.vector.cosine_distance(query_embedding)).label('similarity')
         )
 
         # Filter by summary_ids if provided (join with association table)
@@ -260,7 +290,8 @@ class SearchService:
         bm25_k: Optional[int] = None,
         semantic_k: Optional[int] = None,
         rrf_k: int = 60,
-        summary_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None,
+        use_segmentation: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Hybrid search on child_chunks using RRF (Reciprocal Rank Fusion)
@@ -275,6 +306,7 @@ class SearchService:
             semantic_k: Number of semantic results to retrieve (default: max(k, 20))
             rrf_k: RRF parameter (default: 60)
             summary_ids: Optional list of summary document IDs to scope search
+            use_segmentation: If True, segment query (default: True)
 
         Returns:
             List of fused search results
@@ -287,8 +319,8 @@ class SearchService:
         print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
         print(f"BM25_k={bm25_k}, Semantic_k={semantic_k}, RRF_k={rrf_k}")
 
-        # Get BM25 results
-        bm25_results = self.bm25_search(query, k=bm25_k, summary_ids=summary_ids)
+        # Get BM25 results with segmentation
+        bm25_results = self.bm25_search(query, k=bm25_k, summary_ids=summary_ids, use_segmentation=use_segmentation)
         print(f"📄 BM25: {len(bm25_results)} results")
 
         # Get semantic results
@@ -332,7 +364,8 @@ class SearchService:
         self,
         query: str,
         k: int = 10,
-        summary_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None,
+        use_segmentation: bool = True
     ) -> List[Dict[str, Any]]:
         """
         BM25 search on summary documents using ParadeDB
@@ -341,13 +374,18 @@ class SearchService:
             query: Search query text
             k: Number of results to return
             summary_ids: Optional list of summary document IDs to filter by
+            use_segmentation: If True, segment query (default: True)
 
         Returns:
             List of summary search results
         """
-        print(f"🔍 BM25 Summary query: {query}")
+        # Always segment query to match VnCoreNLP-segmented bm25_text tokens
+        original_query = query
+        query = self.segmentation_service.segment_query(query)
+        query = self._sanitize_bm25_query(query)
+        print(f"🔤 BM25: \"{original_query}\" → \"{query}\"")
 
-        # Build query with optional filter
+        # Build query with optional filter — search on bm25_text
         base_query = """
             SELECT
                 sd.id,
@@ -355,7 +393,7 @@ class SearchService:
                 sd.metadata as meta_data,
                 paradedb.score(sd.id) as rank
             FROM summary_documents sd
-            WHERE summary_content @@@ :query_text
+            WHERE bm25_text @@@ :query_text
         """
         
         if summary_ids:
@@ -416,7 +454,7 @@ class SearchService:
             SummaryDocument.id,
             SummaryDocument.summary_content,
             SummaryDocument.meta_data,
-            (1 - SummaryDocument.embedding.cosine_distance(query_embedding)).label('similarity')
+            (1 - SummaryDocument.vector.cosine_distance(query_embedding)).label('similarity')
         )
         
         if summary_ids:
@@ -441,7 +479,8 @@ class SearchService:
         bm25_weight: float = 0.5,
         semantic_weight: float = 0.5,
         rrf_k: int = 60,
-        summary_ids: Optional[List[str]] = None
+        summary_ids: Optional[List[str]] = None,
+        use_segmentation: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Hybrid search on summary documents using RRF
@@ -453,6 +492,7 @@ class SearchService:
             semantic_weight: Weight for semantic scores (0.0-1.0)
             rrf_k: RRF parameter (default: 60)
             summary_ids: Optional list of summary document IDs to filter by
+            use_segmentation: If True, segment query (default: True)
 
         Returns:
             List of fused summary search results
@@ -461,13 +501,16 @@ class SearchService:
         print(f"Query: {query}")
         print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
 
-        # Get BM25 results
-        bm25_results = self.bm25_search_summaries(query, k=max(k, 10), summary_ids=summary_ids)
+        # Get BM25 results with segmentation
+        bm25_results = self.bm25_search_summaries(query, k=max(k, 10), summary_ids=summary_ids, use_segmentation=use_segmentation)
         print(f"📄 BM25 Summary: {len(bm25_results)} results")
 
         # Get semantic results
         semantic_results = self.semantic_search_summaries(query, k=max(k, 10), summary_ids=summary_ids)
         print(f"🎯 Semantic Summary: {len(semantic_results)} results")
+
+        # Build semantic score map for threshold evaluation
+        semantic_score_map = {doc['id']: doc['score'] for doc in semantic_results}
 
         # RRF fusion
         scores: Dict[str, Dict[str, Any]] = {}
@@ -488,18 +531,17 @@ class SearchService:
         fused = sorted(scores.values(), key=lambda x: x['score'], reverse=True)
         results = [x['doc'] for x in fused[:k]]
 
-        # Add fused score and max score to results
+        # Add fused score and raw semantic_score to each result
+        # semantic_score (cosine similarity) is the meaningful relevance signal;
+        # fused_score (RRF) is constant ~0.016 for top results and cannot be used as threshold
         for i, result in enumerate(results):
             result['fused_score'] = fused[i]['score']
+            result['semantic_score'] = semantic_score_map.get(result['id'], 0.0)
 
         max_score = results[0]['fused_score'] if results else 0.0
+        max_semantic = results[0]['semantic_score'] if results else 0.0
 
         print(f"✅ Fused Summaries: {len(results)} results")
-        print(f"Max score: {round(max_score, 4)}")
+        print(f"Max RRF score: {round(max_score, 4)} | Max semantic score: {round(max_semantic, 4)}")
 
         return results
-
-
-def get_search_service(db: Session) -> SearchService:
-    """Factory function for SearchService"""
-    return SearchService(db)

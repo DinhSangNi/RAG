@@ -94,9 +94,10 @@ class ChildChunk(Base):
     
     # Content
     content = Column(Text, nullable=False)
-    
+    bm25_text = Column(Text, nullable=True)     # VnCoreNLP word-segmented text for BM25 search
+
     # Vector embedding
-    embedding = Column(Vector(settings.DIMENSION_OF_MODEL))
+    vector = Column(Vector(settings.DIMENSION_OF_MODEL))
     
     # Metadata
     section_id = Column(Integer, nullable=True)
@@ -130,17 +131,18 @@ class SummaryDocument(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     
-    # Summary content
+    # Summary content (raw text)
     summary_content = Column(Text, nullable=False)
-    
+    bm25_text = Column(Text, nullable=True)     # VnCoreNLP word-segmented text for BM25 search
+
     # Content hash for duplicate detection
     content_hash = Column(String(64), nullable=True, index=True)  # SHA256 hash
-    
+
     # Processing status
     status = Column(String(50), default="pending", index=True)  # pending, processing, completed, failed
-    
+
     # Vector embedding
-    embedding = Column(Vector(settings.DIMENSION_OF_MODEL))
+    vector = Column(Vector(settings.DIMENSION_OF_MODEL))
     
     # Metadata (có thể lưu info về các documents được tóm tắt)
     meta_data = Column(JSON, nullable=True, name="metadata")
