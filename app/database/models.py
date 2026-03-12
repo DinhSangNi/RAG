@@ -142,7 +142,7 @@ class SummaryDocument(Base):
     status = Column(String(50), default="pending", index=True)  # pending, processing, completed, failed
 
     # Vector embedding
-    embedding = Column(Vector(settings.DIMENSION_OF_MODEL))
+    vector = Column(Vector(settings.DIMENSION_OF_MODEL))
     
     # Metadata (có thể lưu info về các documents được tóm tắt)
     meta_data = Column(JSON, nullable=True, name="metadata")

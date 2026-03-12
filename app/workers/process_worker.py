@@ -510,7 +510,7 @@ def process_document(
                             # Update existing summary
                 summary_doc.summary_content = text
                 summary_doc.content_hash = content_hash_for_summary
-                summary_doc.vector = summary_embedding
+                summary_doc.embedding = summary_embedding
                 summary_doc.bm25_text = get_segmentation_service().segment(text)
                 summary_doc.status = 'completed'
                 
@@ -529,7 +529,7 @@ def process_document(
                 summary_doc = SummaryDocument(
                     summary_content=text,
                     content_hash=content_hash_for_summary,
-                    vector=summary_embedding,
+                    embedding=summary_embedding,
                     bm25_text=get_segmentation_service().segment(text),
                     status='completed',
                     meta_data={
@@ -772,7 +772,7 @@ def process_document(
                 document_id=document_id,
                 parent_id=parent_id,  # Link to parent chunk
                 content=child_data['content'],
-                vector=embedding,
+                embedding=embedding,
                 bm25_text=child_bm25_texts[idx] if idx < len(child_bm25_texts) else child_data['content'],
                 chunk_index=child_data['chunk_index'],
                 section_id=child_data['metadata'].get('section_id'),

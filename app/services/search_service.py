@@ -232,7 +232,7 @@ class SearchService:
             ChildChunk.section_id,
             ChildChunk.sub_chunk_id,
             ChildChunk.meta_data,
-            (1 - ChildChunk.vector.cosine_distance(query_embedding)).label('similarity')
+            (1 - ChildChunk.embedding.cosine_distance(query_embedding)).label('similarity')
         )
 
         # Filter by summary_ids if provided (join with association table)
@@ -454,7 +454,7 @@ class SearchService:
             SummaryDocument.id,
             SummaryDocument.summary_content,
             SummaryDocument.meta_data,
-            (1 - SummaryDocument.vector.cosine_distance(query_embedding)).label('similarity')
+            (1 - SummaryDocument.embedding.cosine_distance(query_embedding)).label('similarity')
         )
         
         if summary_ids:
