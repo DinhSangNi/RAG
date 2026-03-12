@@ -8,6 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.config import settings
 from app.database.connection import engine, Base
+from app.containers import Container
+
+# ------------------------------------------------------------------ #
+# Bootstrap DI container                                              #
+# Must be done before routes are imported so that @inject decorators  #
+# in app/dependencies.py are wired correctly.                         #
+# ------------------------------------------------------------------ #
+container = Container()
+container.wire(modules=["app.dependencies"])
 
 # Create database tables
 # Base.metadata.create_all(bind=engine)
@@ -18,6 +27,9 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="RAG Service API với PostgreSQL, pgvector và Redis Queue"
 )
+
+# Attach container to app for access via request.app.container if needed
+app.container = container  # type: ignore[attr-defined]
 
 # CORS middleware configuration
 app.add_middleware(
@@ -30,6 +42,22 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(router)
+
+
+@app.on_event("startup")
+async def _warm_up_stopwords():
+    """Build the auto-stopword cache once at startup so the first real request
+    doesn't pay the O(n) corpus scan cost.
+    """
+    from app.database.connection import SessionLocal
+    from app.services.search_service import SearchService
+    try:
+        db = SessionLocal()
+        SearchService(db).get_stopwords()
+        db.close()
+        print("✅ Stopword cache warmed up")
+    except Exception as e:
+        print(f"⚠️ Stopword warm-up failed (will retry on first request): {e}")
 
 
 @app.get("/")

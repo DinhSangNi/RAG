@@ -28,8 +28,9 @@ from app.api.schemas import (
     UpdateSummaryResponse
 )
 from app.services.queue_service import queue_process_job, get_job_status
-from app.services.search_service import get_search_service
-from app.services.rag_service import get_rag_service
+from app.dependencies import get_search_service, get_rag_service
+from app.services.search_service import SearchService
+from app.services.rag_service import RAGService
 
 router = APIRouter(prefix="/api/v1", tags=["documents"])
 
@@ -769,13 +770,11 @@ async def delete_document(
 @router.post("/chat", response_model=ChatResponse)
 async def rag_chat(
     request: ChatRequest,
-    db: Session = Depends(get_db)
+    rag_service: RAGService = Depends(get_rag_service)
 ):
     """
     RAG chat with advanced retrieval and answer generation
     """
-    rag_service = get_rag_service(db)
-    
     result = rag_service.chat(
         question=request.question,
         document_ids=request.document_ids,
