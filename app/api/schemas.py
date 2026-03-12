@@ -167,8 +167,8 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=10, description="Number of results to return")
     document_ids: Optional[List[str]] = Field(default=None, description="Filter by document IDs (UUIDs)")
     search_type: str = Field(default="hybrid", description="Search type: bm25, semantic, hybrid")
-    bm25_weight: float = Field(default=0.6, description="BM25 weight for hybrid search")
-    semantic_weight: float = Field(default=0.4, description="Semantic weight for hybrid search")
+    bm25_weight: float = Field(default=0.5, description="BM25 weight for hybrid search")
+    semantic_weight: float = Field(default=0.5, description="Semantic weight for hybrid search")
 
     class Config:
         json_schema_extra = {
@@ -176,8 +176,8 @@ class SearchRequest(BaseModel):
                 "query": "When was Hồ Chí Minh born?",
                 "top_k": 10,
                 "search_type": "hybrid",
-                "bm25_weight": 0.6,
-                "semantic_weight": 0.4
+                "bm25_weight": 0.5,
+                "semantic_weight": 0.5
             }
         }
 

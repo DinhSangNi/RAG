@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     # Pinecone (Legacy - optional, for backward compatibility)
     PINECONE_API_KEY: Optional[str] = None
 
+    # Retrieval Configuration
+    # Minimum cosine similarity for a summary to be considered relevant.
+    # Calibrated from dataset: correct-topic summaries score 0.67–0.80,
+    # off-topic summaries score 0.60–0.66. Adjust if corpus changes significantly.
+    SUMMARY_RELEVANCE_THRESHOLD: float = 0.67
+
     # Chunking Configuration
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 150

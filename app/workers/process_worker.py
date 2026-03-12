@@ -18,6 +18,7 @@ from app.config import settings
 from app.database.models import Document, ChildChunk, SummaryDocument
 from app.services.chunking_service import get_chunking_service
 from app.services.embedding_service import get_embedding_service
+from app.services.segmentation_service import get_segmentation_service
 
 
 # ============================================================================
@@ -506,10 +507,11 @@ def process_document(
                 if not summary_doc:
                     raise ValueError(f"Summary document {summary_id} not found")
                 
-                # Update existing summary
+                            # Update existing summary
                 summary_doc.summary_content = text
                 summary_doc.content_hash = content_hash_for_summary
-                summary_doc.embedding = summary_embedding
+                summary_doc.vector = summary_embedding
+                summary_doc.bm25_text = get_segmentation_service().segment(text)
                 summary_doc.status = 'completed'
                 
                 # Update metadata
@@ -523,11 +525,12 @@ def process_document(
                 db.refresh(summary_doc)
                 print(f"💾 Updated existing summary document: {summary_doc.id}")
             else:
-                # Fallback: create new summary if summary_id not provided (shouldn't happen)
+                            # Fallback: create new summary if summary_id not provided (shouldn't happen)
                 summary_doc = SummaryDocument(
                     summary_content=text,
                     content_hash=content_hash_for_summary,
-                    embedding=summary_embedding,
+                    vector=summary_embedding,
+                    bm25_text=get_segmentation_service().segment(text),
                     status='completed',
                     meta_data={
                         'processed_file': md_file_path,
@@ -649,6 +652,29 @@ def process_document(
         phase_duration = time.time() - phase_start
         timing_stats['phases']['chunking_total'] = phase_duration
         print(f"⏱️  Total CHUNKING time: {phase_duration:.2f}s")
+
+        # ========================================================================
+        # PHASE 2b: WORD SEGMENTATION FOR BM25 (child chunks)
+        # ========================================================================
+        print(f"\n{'='*70}")
+        print(f"🔤 PHASE 2b: WORD SEGMENTATION (VnCoreNLP) - Starting")
+        print(f"{'='*70}")
+        seg_start = time.time()
+
+        if job:
+            job.meta['progress'] = {'step': 'word_segmentation', 'current': 48, 'total': 100}
+            job.save_meta()
+
+        segmentation_service = get_segmentation_service()
+        child_bm25_texts = []
+        for child_data in child_chunks:
+            bm25_text = segmentation_service.segment(child_data['content'])
+            child_bm25_texts.append(bm25_text)
+
+        seg_duration = time.time() - seg_start
+        print(f"🔤 Segmented {len(child_bm25_texts)} child chunks for BM25")
+        print(f"⏱️  Word segmentation took: {seg_duration:.2f}s")
+        timing_stats['phases']['word_segmentation'] = seg_duration
         
         # ========================================================================
         # PHASE 3: EMBEDDING (50-95%)
@@ -746,7 +772,8 @@ def process_document(
                 document_id=document_id,
                 parent_id=parent_id,  # Link to parent chunk
                 content=child_data['content'],
-                embedding=embedding,
+                vector=embedding,
+                bm25_text=child_bm25_texts[idx] if idx < len(child_bm25_texts) else child_data['content'],
                 chunk_index=child_data['chunk_index'],
                 section_id=child_data['metadata'].get('section_id'),
                 sub_chunk_id=child_data['metadata'].get('sub_chunk_id'),

@@ -25,11 +25,12 @@ class RAGService:
     def __init__(
         self,
         db: Session,
+        search_service: Optional[SearchService] = None,
         model_name: str | None = None,
         temperature: float = 0.1,
         top_k: int = 20,
-        bm25_weight: float = 0.6,
-        semantic_weight: float = 0.4,
+        bm25_weight: float = 0.5,
+        semantic_weight: float = 0.5,
         first_pass_k: int = 12,
         variant_count: int = 5,
         rrf_k: int = 60
@@ -39,6 +40,8 @@ class RAGService:
 
         Args:
             db: Database session
+            search_service: Optional pre-built SearchService (injected via DI);
+                            if omitted a new instance is created from ``db``.
             model_name: LLM model name (defaults to config)
             temperature: LLM temperature
             top_k: Number of results to return
@@ -49,7 +52,7 @@ class RAGService:
             rrf_k: RRF parameter
         """
         self.db = db
-        self.search_service = SearchService(db)
+        self.search_service = search_service or SearchService(db)
 
         # Use model from config if not provided
         self.model_name = model_name or settings.GEMINI_MODEL_NAME
@@ -76,11 +79,12 @@ class RAGService:
             ("human", """Bạn là trợ lý AI. Trả lời câu hỏi dựa trên CONTEXT được cung cấp.
 
 NGUYÊN TẮC:
-1) CHỈ trả lời dựa trên thông tin trong CONTEXT
-2) Nếu CONTEXT không có thông tin → trả lời đúng câu: "Tôi không tìm thấy thông tin này trong tài liệu."
+1) Trả lời dựa trên thông tin trong CONTEXT. Bạn có thể SUY LUẬN HỢP LÝ từ các sự kiện liên quan trong CONTEXT.
+2) Nếu CONTEXT không có đủ thông tin để trả lời → trả lời đúng câu: "Tôi không tìm thấy thông tin này trong tài liệu."
 3) Trả lời NGẮN GỌN, CHÍNH XÁC, bằng tiếng Việt
-4) Nếu trong CONTEXT có nhiều tên gọi (bí danh / tên khai sinh / tên khác) của cùng một người, hãy coi chúng là 1 thực thể khi suy luận.
-5) Không bịa đặt.
+4) Nếu trong CONTEXT có nhiều tên gọi (bí danh / tên khai sinh / tên khác / tên húy) của cùng một người, hãy coi chúng là 1 thực thể khi suy luận.
+5) Khi có các sự kiện xảy ra cùng thời điểm hoặc liên quan trực tiếp, hãy kết hợp chúng để trả lời.
+6) Không bịa đặt thông tin không có trong CONTEXT.
 
 CONTEXT:
 {context}
@@ -191,6 +195,18 @@ CÂU HỎI: {question}
     
 
     ## Tách chuỗi thành các token thân thiện với tiếng Việt
+    @staticmethod
+    def _normalize_question(question: str) -> str:
+        """Normalize question: collapse whitespace and remove stray punctuation spacing.
+        
+        E.g. "Hồ Chí Minh là ai ?" → "Hồ Chí Minh là ai?"
+        """
+        # Collapse multiple spaces
+        q = re.sub(r' +', ' ', question.strip())
+        # Remove space before terminal punctuation (? ! .)
+        q = re.sub(r'\s+([?!.,;:])', r'\1', q)
+        return q
+
     @staticmethod
     def _tokenize_vi(text: str) -> List[str]:
         """Vietnamese-friendly tokenizer"""
@@ -324,6 +340,13 @@ CÂU HỎI: {question}
             print(f"⚠️ Entity extraction failed: {e}")
             return {"entity": "", "aliases": [], "keywords": []}
     
+    def _replace_entity_in_question(self, question: str, entity: str, replacement: str) -> str:
+        """Replace entity in question with replacement, preserving sentence structure."""
+        return re.sub(re.escape(entity), replacement, question, flags=re.IGNORECASE).strip()
+
+    def _entity_in_question(self, question: str, entity: str) -> bool:
+        return bool(entity and re.search(re.escape(entity), question, re.IGNORECASE))
+
     def _make_variants(
         self, 
         question: str, 
@@ -334,30 +357,28 @@ CÂU HỎI: {question}
         aliases = info.get("aliases") or []
         keywords = info.get("keywords") or []
         
-        # Filter stopwords
+        # Filter stopwords to build a keyword-only core (no entity tokens)
         stop = self.search_service.get_stopwords()
         q_tokens = self._tokenize_vi(question)
-        q_core = [t for t in q_tokens if t not in stop]
+        entity_tokens = set(self._tokenize_vi(entity)) if entity else set()
+        q_core = [t for t in q_tokens if t not in stop and t not in entity_tokens]
         core_text = " ".join(q_core).strip()
         
         variants = [question]
         
-        # Entity-based variants
-        if entity:
-            if core_text:
-                variants.append(f"{entity} {core_text}")
-            variants.append(f"{entity} {question}")
-        
-        # Alias-based variants
+        # Alias-based variants: replace entity in question to preserve grammar
         for alias in aliases[:self.variant_count]:
-            if core_text:
-                variants.append(f"{alias} {core_text}")
+            if self._entity_in_question(question, entity):
+                replaced = self._replace_entity_in_question(question, entity, alias)
+                variants.append(replaced)
             else:
                 variants.append(f"{alias} {question}")
         
-        # Keyword-based variants
+        # Keyword-based variant: entity + non-entity core keywords
         if entity and keywords:
             variants.append(f"{entity} " + " ".join(keywords[:8]))
+        elif keywords and core_text:
+            variants.append(core_text + " " + " ".join(keywords[:8]))
         elif keywords:
             variants.append(" ".join(keywords[:8]))
         
@@ -453,7 +474,7 @@ CÂU HỎI: {question}
         document_ids: Optional[List[str]] = None,
         summary_k: int = 5,
         chunk_k: int = 20,
-        min_summary_score: float = 0.005
+        min_summary_score: float = settings.SUMMARY_RELEVANCE_THRESHOLD
     ) -> Dict[str, Any]:
         """
         Hierarchical retrieval workflow with 6 steps:
@@ -467,7 +488,7 @@ CÂU HỎI: {question}
         
         Step 1: Query on summary documents (hybrid search) => get relevant documents (determine scope)
                 If document_ids provided, only search summaries linked to those documents
-                If no summary docs found or max score < min_summary_score, search all child chunks
+                If no summary docs found or max semantic similarity < min_summary_score (default 0.67), search all child chunks
         Step 2: Format summary docs as context => Send to LLM to check if enough info to answer
         Step 3: If enough: return summary docs for answer generation
                 If not enough: query expansion => extract entities, aliases, keywords
@@ -486,6 +507,7 @@ CÂU HỎI: {question}
         print(f"\n{'='*70}")
         print(f"🔍 HIERARCHICAL RETRIEVAL")
         print(f"{'='*70}")
+        question = self._normalize_question(question)
         print(f"Question: {question}")
         if document_ids:
             print(f"Filtering by document IDs: {document_ids}")
@@ -520,7 +542,8 @@ CÂU HỎI: {question}
         )
         
         max_score = summary_docs[0]['fused_score'] if summary_docs else 0.0
-        print(f"Found {len(summary_docs)} summary docs, max score: {round(max_score, 4)}")
+        max_semantic_score = max((doc.get('semantic_score', 0.0) for doc in summary_docs), default=0.0)
+        print(f"Found {len(summary_docs)} summary docs, max RRF score: {round(max_score, 4)}, max semantic: {round(max_semantic_score, 4)}")
         
         # Log chi tiết các summary documents
         if summary_docs:
@@ -534,8 +557,9 @@ CÂU HỎI: {question}
                 print(f"     Preview: {content_preview}...")
         
         # Check if we should fall back to full child chunk search
-        if not summary_docs or max_score < min_summary_score:
-            print(f"⚠️ No good summary docs found (max score < {min_summary_score})")
+        # Use semantic similarity (cosine) as threshold — RRF scores are always ~0.016 for top result
+        if not summary_docs or max_semantic_score < min_summary_score:
+            print(f"⚠️ No good summary docs found (max semantic score {round(max_semantic_score, 4)} < threshold {min_summary_score})")
             print(f"Falling back to full child chunk search with 2-pass retrieval")
             
             # PASS 1: Initial search on all child chunks
@@ -588,7 +612,7 @@ CÂU HỎI: {question}
             variant_results = []  # Track results for each variant
             
             for i, variant in enumerate(variants, 1):
-                print(f"Variant {i}/{len(variants)}: {variant[:60]}...")
+                print(f"\n📝 Variant {i}/{len(variants)}: {variant}")
                 results = self.search_service.hybrid_search(
                     query=variant,
                     k=max(chunk_k, 20),
@@ -623,9 +647,27 @@ CÂU HỎI: {question}
                 }
             }
         
-        # Extract summary IDs from summary docs for scoped search
-        summary_ids = [doc['id'] for doc in summary_docs]
-        print(f"Scope: {len(summary_ids)} summary documents")
+        # Filter summaries per-doc by semantic_score — BM25 can inflate ranking of
+        # tangentially-related summaries (e.g. Tiền Lê mentions Đinh in passing),
+        # so checking only the global max is not enough.
+        relevant_summary_docs = [
+            doc for doc in summary_docs
+            if doc.get('semantic_score', 0.0) >= min_summary_score
+        ]
+        if not relevant_summary_docs:
+            # max_semantic passed the global check above but no individual doc meets
+            # the threshold (edge case) — fall back to top-1 to avoid empty scope
+            relevant_summary_docs = summary_docs[:1]
+
+        summary_ids = [doc['id'] for doc in relevant_summary_docs]
+        print(f"Scope: {len(summary_ids)}/{len(summary_docs)} summary documents (semantic ≥ {min_summary_score})")
+        for doc in relevant_summary_docs:
+            preview = doc.get('summary_content', '')[:60].replace('\n', ' ')
+            print(f"  ✅ {doc.get('semantic_score', 0):.4f}  {preview}...")
+        for doc in summary_docs:
+            if doc not in relevant_summary_docs:
+                preview = doc.get('summary_content', '')[:60].replace('\n', ' ')
+                print(f"  ❌ {doc.get('semantic_score', 0):.4f}  {preview}... (filtered out)")
         
         # STEP 2: Check if summary docs have enough information
         print(f"\n🧠 STEP 2: Check information sufficiency")
@@ -693,7 +735,7 @@ CÂU HỎI: {question}
             variant_results = []  # Track results for each variant
             
             for i, variant in enumerate(variants, 1):
-                print(f"Variant {i}/{len(variants)}: {variant[:60]}...")
+                print(f"\n📝 Variant {i}/{len(variants)}: {variant}")
                 results = self.search_service.hybrid_search(
                     query=variant,
                     k=max(chunk_k, 20),
@@ -757,6 +799,7 @@ CÂU HỎI: {question}
             }
         """
         # Use hierarchical retrieval workflow
+        question = self._normalize_question(question)
         result = self.retrieve_hierarchical(question, document_ids=document_ids)
         docs = result['docs']
         source = result['source']
@@ -822,8 +865,3 @@ CÂU HỎI: {question}
                 'model': getattr(self.llm, 'model', 'unknown')
             }
         }
-
-
-def get_rag_service(db: Session) -> RAGService:
-    """Factory function for RAGService"""
-    return RAGService(db)
