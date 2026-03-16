@@ -7,7 +7,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHea
 from typing import List, Dict, Any
 from langchain_core.documents import Document as LangChainDocument
 
-
 class ChunkingService:
     """
     Service for chunking documents with hierarchical structure

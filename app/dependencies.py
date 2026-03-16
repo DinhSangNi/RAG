@@ -39,7 +39,6 @@ def get_search_service(
     )
 
 
-@inject
 def get_rag_service(
     db: Session = Depends(get_db),
     search_service: SearchService = Depends(get_search_service),

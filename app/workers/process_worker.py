@@ -267,6 +267,25 @@ def convert_html_to_normalized_md(html_file_path, output_md_file_path=None):
     return output_md_file_path
 
 
+def extract_text_from_html_file(html_file_path: str) -> str:
+    """Extract plain text from HTML as a fallback when markdown conversion returns empty content."""
+    with open(html_file_path, "r", encoding="utf-8") as f:
+        soup = BeautifulSoup(f, "html.parser")
+
+    content = soup.find("div", class_="mw-parser-output") or soup.find("body") or soup
+    text = content.get_text("\n", strip=True)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def read_text_file_fallback(file_path: str) -> str:
+    """Read text from file using tolerant UTF-8 decoding as a last-resort fallback."""
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        text = f.read()
+    text = re.sub(r"\s+", " ", text or "").strip()
+    return text
+
+
 # Tạo database session cho worker
 engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -461,6 +480,49 @@ def process_document(
         step_start = time.time()
         with open(md_file_path, 'r', encoding='utf-8') as f:
             text = f.read()
+        text = text.strip()
+
+        # Some pages can produce empty markdown via converter.
+        # For summary jobs, fallback to HTML extraction and then raw text loading.
+        if is_summary and not text and file_extension in ['.html', '.htm']:
+            fallback_candidates = [file_path]
+            if 'cleaned_file_path' in locals():
+                fallback_candidates.append(cleaned_file_path)
+
+            for candidate in fallback_candidates:
+                try:
+                    fallback_text = extract_text_from_html_file(candidate)
+                    if fallback_text:
+                        text = fallback_text
+                        print(f"⚠️ Markdown conversion produced empty text; used HTML fallback from: {candidate}")
+                        break
+                except Exception as fallback_error:
+                    print(f"⚠️ HTML fallback failed for {candidate}: {fallback_error}")
+
+        if is_summary and not text:
+            raw_candidates = [file_path]
+            if 'md_file_path' in locals():
+                raw_candidates.append(md_file_path)
+            if 'cleaned_file_path' in locals():
+                raw_candidates.append(cleaned_file_path)
+
+            seen = set()
+            for candidate in raw_candidates:
+                if candidate in seen:
+                    continue
+                seen.add(candidate)
+                try:
+                    fallback_text = read_text_file_fallback(candidate)
+                    if fallback_text:
+                        text = fallback_text
+                        print(f"⚠️ Used raw text fallback from: {candidate}")
+                        break
+                except Exception as fallback_error:
+                    print(f"⚠️ Raw text fallback failed for {candidate}: {fallback_error}")
+
+        if not text:
+            raise ValueError("Nội dung sau khi ingest rỗng, không thể tạo embedding/chunks")
+
         step_duration = time.time() - step_start
         print(f"📄 Loaded file: {md_file_path} ({len(text)} chars)")
         print(f"⏱️  File Loading took: {step_duration:.2f}s")
@@ -930,6 +992,16 @@ def process_document(
         }
         
     except Exception as e:
+        # Update summary status to failed for summary jobs.
+        if is_summary and summary_id:
+            summary_doc = db.query(SummaryDocument).filter(SummaryDocument.id == summary_id).first()
+            if summary_doc:
+                summary_doc.status = "failed"
+                current_meta = summary_doc.meta_data or {}
+                current_meta['error'] = str(e)
+                summary_doc.meta_data = current_meta
+                db.commit()
+
         # Update document status to failed
         if 'document' in locals() and document:
             document.status = "failed"  # type: ignore[assignment]

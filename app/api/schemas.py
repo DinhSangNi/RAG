@@ -93,6 +93,79 @@ class UpdateSummaryResponse(BaseModel):
         }
 
 
+class UpdateSummaryTextRequest(BaseModel):
+    """Request schema for directly updating summary content by text."""
+    summary_text: str = Field(..., description="New summary text content")
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Optional metadata fields to merge into summary metadata"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "summary_text": "Vo Nguyen Giap la Dai tuong dau tien cua Quan doi Nhan dan Viet Nam...",
+                "metadata": {"source": "manual_update"}
+            }
+        }
+
+
+class UpdateSummaryTextResponse(BaseModel):
+    """Response schema for direct summary text update endpoint."""
+    status: str = Field(..., description="Status: updated, unchanged")
+    summary_id: str = Field(..., description="Summary document ID (UUID)")
+    message: str = Field(..., description="Status message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "updated",
+                "summary_id": "550e8400-e29b-41d4-a716-446655440000",
+                "message": "Summary document updated successfully"
+            }
+        }
+
+
+class WikipediaFetchRequest(BaseModel):
+    """Request schema for fetching a Wikipedia page HTML by title."""
+    title: str = Field(..., description="Wikipedia page title to fetch")
+    language: str = Field(default="vi", description="Wikipedia language code")
+    auto_suggest: bool = Field(default=True, description="Enable wikipedia auto-suggest for title resolution")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "title": "Hồ Chí Minh",
+                "language": "vi",
+                "auto_suggest": True
+            }
+        }
+
+
+class WikipediaFetchResponse(BaseModel):
+    """Response schema for fetched Wikipedia HTML file."""
+    requested_title: str = Field(..., description="Original title requested by user")
+    resolved_title: str = Field(..., description="Resolved Wikipedia page title")
+    language: str = Field(..., description="Wikipedia language code used")
+    page_url: str = Field(..., description="Resolved Wikipedia page URL")
+    file_path: str = Field(..., description="Saved HTML file path")
+    file_name: str = Field(..., description="Saved HTML filename")
+    message: str = Field(..., description="Status message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "requested_title": "Hồ Chí Minh",
+                "resolved_title": "Hồ Chí Minh",
+                "language": "vi",
+                "page_url": "https://vi.wikipedia.org/wiki/H%E1%BB%93_Ch%C3%AD_Minh",
+                "file_path": "data/raw_data/wikipedia/Hồ_Chí_Minh.html",
+                "file_name": "Hồ_Chí_Minh.html",
+                "message": "Wikipedia HTML fetched successfully"
+            }
+        }
+
+
 class MultiFileUploadResponse(BaseModel):
     """
     Response schema for multi-file upload

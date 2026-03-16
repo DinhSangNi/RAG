@@ -35,7 +35,6 @@ class Settings(BaseSettings):
     # Model generates 3072d but truncated to 768d for storage efficiency
     EMBEDDING_MODEL_NAME: str = "models/gemini-embedding-001"
     DIMENSION_OF_MODEL: int = 768
-
     # Pinecone (Legacy - optional, for backward compatibility)
     PINECONE_API_KEY: Optional[str] = None
 

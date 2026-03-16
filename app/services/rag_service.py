@@ -5,6 +5,8 @@ Implements hierarchical retrieval with query expansion and entity extraction
 
 import json
 import re
+import time
+import uuid
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -32,7 +34,7 @@ class RAGService:
         bm25_weight: float = 0.5,
         semantic_weight: float = 0.5,
         first_pass_k: int = 12,
-        variant_count: int = 5,
+        variant_count: int = 3,
         rrf_k: int = 60
     ):
         """
@@ -60,7 +62,7 @@ class RAGService:
 
         self.top_k = top_k
         self.first_pass_k = first_pass_k
-        self.variant_count = variant_count
+        self.variant_count = min(max(1, variant_count), 3)
         self.rrf_k = rrf_k
         self.bm25_weight = bm25_weight
         self.semantic_weight = semantic_weight
@@ -85,6 +87,10 @@ NGUYÊN TẮC:
 4) Nếu trong CONTEXT có nhiều tên gọi (bí danh / tên khai sinh / tên khác / tên húy) của cùng một người, hãy coi chúng là 1 thực thể khi suy luận.
 5) Khi có các sự kiện xảy ra cùng thời điểm hoặc liên quan trực tiếp, hãy kết hợp chúng để trả lời.
 6) Không bịa đặt thông tin không có trong CONTEXT.
+7) Phát hiện GIẢ ĐỊNH SAI: Nếu câu hỏi chứa giả định hoặc thông tin không đúng sự thật (ví dụ: gán sự kiện/hành động cho nhân vật không liên quan), hãy:
+   a) Xác nhận rõ: "Không, [giả định đó] là không đúng."
+   b) Giải thích ngắn gọn dựa trên CONTEXT tại sao giả định đó sai.
+   c) Cung cấp thông tin đúng nếu CONTEXT có đủ dữ liệu.
 
 CONTEXT:
 {context}
@@ -154,28 +160,6 @@ CONTEXT (chỉ để tìm aliases, KHÔNG dùng để suy diễn entity):
 JSON:""")
         ])
         
-        # Sufficiency check prompt
-        self.sufficiency_prompt = ChatPromptTemplate.from_messages([
-            ("human", """Bạn là chuyên gia đánh giá thông tin. Hãy kiểm tra xem CONTEXT có đủ thông tin để trả lời CÂU HỎI hay không.
-
-Trả về JSON hợp lệ theo schema:
-{{
-  "sufficient": true/false,
-  "reason": "giải thích ngắn gọn tại sao đủ hoặc không đủ"
-}}
-
-Nguyên tắc:
-- sufficient = true: CONTEXT có đủ thông tin cụ thể để trả lời câu hỏi một cách chính xác
-- sufficient = false: CONTEXT thiếu thông tin quan trọng, quá chung chung, hoặc không liên quan
-- Chỉ trả về JSON, không thêm chữ nào khác
-
-CONTEXT:
-{context}
-
-CÂU HỎI: {question}
-""")
-        ])
-        
         # Build chains
         self.rag_chain = (
             {
@@ -188,8 +172,6 @@ CÂU HỎI: {question}
         )
         
         self.alias_chain = self.alias_prompt | self.llm | StrOutputParser()
-        
-        self.sufficiency_chain = self.sufficiency_prompt | self.llm | StrOutputParser()
         
         print("✅ RAG Service ready!")
     
@@ -214,6 +196,11 @@ CÂU HỎI: {question}
         if not text:
             return []
         return [t.lower() for t in word_pattern.findall(text)]
+
+    @staticmethod
+    def _next_trace_id() -> str:
+        """Create a short trace id so one request can be tracked across logs."""
+        return uuid.uuid4().hex[:8]
     
     def _format_docs(self, docs: List[Dict[str, Any]]) -> str:
         """Format documents for context"""
@@ -239,53 +226,7 @@ CÂU HỎI: {question}
             formatted.append(f"--- Tóm tắt {i} ---\n{content}")
         
         return "\n\n".join(formatted)
-    
-    def _check_info_sufficiency(
-        self,
-        question: str,
-        summary_docs: List[Dict[str, Any]]
-    ) -> bool:
-        """
-        Check if summary documents have enough information to answer the question
-        Returns True if sufficient, False otherwise
-        """
-        if not summary_docs:
-            return False
-        
-        context = self._format_summary_docs(summary_docs)
-        
-        try:
-            raw = self.sufficiency_chain.invoke({
-                "question": question,
-                "context": context
-            })
-            
-            # Clean potential markdown code blocks
-            clean_raw = raw.strip()
-            if clean_raw.startswith("```"):
-                lines = clean_raw.split("\n")
-                clean_raw = "\n".join(lines[1:-1]) if len(lines) > 2 else clean_raw
-                clean_raw = clean_raw.replace("```json", "").replace("```", "").strip()
-            
-            # Try to parse JSON response
-            try:
-                data = json.loads(clean_raw)
-                sufficient = data.get("sufficient", False)
-                reason = data.get("reason", "")
-                print(f"🧠 Sufficiency check: {sufficient} (reason: {reason[:50]})")
-                return sufficient
-            except json.JSONDecodeError:
-                # Fallback to simple YES/NO parsing
-                answer = raw.strip().upper()
-                sufficient = "YES" in answer or "CÓ" in answer or '"SUFFICIENT": TRUE' in answer
-                print(f"🧠 Sufficiency check: {sufficient} (fallback parse, response: {raw[:50]})")
-                return sufficient
-            
-        except Exception as e:
-            print(f"⚠️ Sufficiency check failed: {e}")
-            # If check fails, assume not sufficient to drill down
-            return False
-    
+
     ## Trích xuất thực thể, bí danh, từ khóa từ ngữ cảnh bằng LLM
     def _extract_entity_info(
         self, 
@@ -392,8 +333,8 @@ CÂU HỎI: {question}
             seen.add(v2.lower())
             deduped.append(v2)
         
-        return deduped[:max(3, self.variant_count)]
-    
+        return deduped[:self.variant_count]
+
     def _rrf_fuse(
         self, 
         list_of_results: List[List[Dict[str, Any]]], 
@@ -468,13 +409,14 @@ CÂU HỎI: {question}
         print(f"✅ Retrieved {len(parent_chunks_dict)} parent chunks for context")
         return parent_chunks_dict
     
-    def retrieve_hierarchical(
+    async def retrieve_hierarchical(
         self,
         question: str,
         document_ids: Optional[List[str]] = None,
         summary_k: int = 5,
         chunk_k: int = 20,
-        min_summary_score: float = settings.SUMMARY_RELEVANCE_THRESHOLD
+        min_summary_score: float = settings.SUMMARY_RELEVANCE_THRESHOLD,
+        trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Hierarchical retrieval workflow with 6 steps:
@@ -489,13 +431,9 @@ CÂU HỎI: {question}
         Step 1: Query on summary documents (hybrid search) => get relevant documents (determine scope)
                 If document_ids provided, only search summaries linked to those documents
                 If no summary docs found or max semantic similarity < min_summary_score (default 0.67), search all child chunks
-        Step 2: Format summary docs as context => Send to LLM to check if enough info to answer
-        Step 3: If enough: return summary docs for answer generation
-                If not enough: query expansion => extract entities, aliases, keywords
-        Step 4: Use each query variant to search child chunks belonging to summary docs from step 1
-                If step 1 found nothing, search all child chunks
-        Step 5: Aggregate results, calculate RRF scores for chunks from step 4
-        Step 6: Return chunks for answer generation
+        Step 2: Filter summary docs by threshold to define summary scope
+        Step 3: Search child chunks linked to in-scope summaries
+        Step 4: Return parent chunk context from retrieved child chunks
         
         Returns:
             {
@@ -504,8 +442,11 @@ CÂU HỎI: {question}
                 'metadata': Dict
             }
         """
+        trace = trace_id or self._next_trace_id()
+        retrieval_started_at = time.perf_counter()
+
         print(f"\n{'='*70}")
-        print(f"🔍 HIERARCHICAL RETRIEVAL")
+        print(f"🔍 HIERARCHICAL RETRIEVAL | trace={trace}")
         print(f"{'='*70}")
         question = self._normalize_question(question)
         print(f"Question: {question}")
@@ -532,7 +473,8 @@ CÂU HỎI: {question}
         
         # STEP 1: Query on summary documents
         print(f"\n📋 STEP 1: Search summary documents")
-        summary_docs = self.search_service.hybrid_search_summaries(
+        step1_started_at = time.perf_counter()
+        summary_docs = await self.search_service.hybrid_search_summaries(
             query=question,
             k=summary_k,
             bm25_weight=self.bm25_weight,
@@ -540,6 +482,8 @@ CÂU HỎI: {question}
             rrf_k=self.rrf_k,
             summary_ids=summary_ids
         )
+        step1_elapsed = time.perf_counter() - step1_started_at
+        print(f"⏱️ STEP 1 done in {step1_elapsed:.3f}s")
         
         max_score = summary_docs[0]['fused_score'] if summary_docs else 0.0
         max_semantic_score = max((doc.get('semantic_score', 0.0) for doc in summary_docs), default=0.0)
@@ -564,7 +508,8 @@ CÂU HỎI: {question}
             
             # PASS 1: Initial search on all child chunks
             print(f"\n📦 FALLBACK - Pass 1: Initial search")
-            first_pass_chunks = self.search_service.hybrid_search(
+            fallback_pass1_started_at = time.perf_counter()
+            first_pass_chunks = await self.search_service.hybrid_search(
                 query=question,
                 k=self.first_pass_k,
                 bm25_weight=self.bm25_weight,
@@ -572,6 +517,7 @@ CÂU HỎI: {question}
                 rrf_k=self.rrf_k,
                 summary_ids=summary_ids
             )
+            print(f"⏱️ FALLBACK pass 1 done in {time.perf_counter() - fallback_pass1_started_at:.3f}s")
             print(f"Found {len(first_pass_chunks)} chunks in first pass")
             
             # Log the 12 chunks from pass 1 (fallback mode)
@@ -613,7 +559,8 @@ CÂU HỎI: {question}
             
             for i, variant in enumerate(variants, 1):
                 print(f"\n📝 Variant {i}/{len(variants)}: {variant}")
-                results = self.search_service.hybrid_search(
+                variant_started_at = time.perf_counter()
+                results = await self.search_service.hybrid_search(
                     query=variant,
                     k=max(chunk_k, 20),
                     bm25_weight=self.bm25_weight,
@@ -626,12 +573,18 @@ CÂU HỎI: {question}
                     'variant': variant,
                     'top_3_chunks': results[:3]  # Store top 3 for this variant
                 })
-                print(f"  → {len(results)} chunks")
+                print(f"  → {len(results)} chunks | {time.perf_counter() - variant_started_at:.3f}s")
             
             # RRF fusion
             print(f"\n📊 FALLBACK - RRF fusion of {len(all_results)} result sets")
+            fallback_fusion_started_at = time.perf_counter()
             fused_chunks = self._rrf_fuse(all_results, rrf_k=self.rrf_k, top_k=chunk_k)
+            fallback_fusion_elapsed = time.perf_counter() - fallback_fusion_started_at
             print(f"✅ Fused: {len(fused_chunks)} chunks")
+            print(f"⏱️ FALLBACK fusion done in {fallback_fusion_elapsed:.3f}s")
+
+            total_retrieval_time = time.perf_counter() - retrieval_started_at
+            print(f"✅ Retrieval complete (fallback) | trace={trace} | total={total_retrieval_time:.3f}s")
             
             return {
                 'docs': fused_chunks,
@@ -643,141 +596,101 @@ CÂU HỎI: {question}
                     'variants_count': len(variants),
                     'variants': variants,
                     'variant_results': variant_results,
-                    'fallback_mode': 'two_pass'
+                    'fallback_mode': 'two_pass',
+                    'trace_id': trace,
+                    'retrieval_timing': {
+                        'step1_summary_search_s': round(step1_elapsed, 3),
+                        'fallback_pass1_s': round(time.perf_counter() - fallback_pass1_started_at, 3),
+                        'fallback_fusion_s': round(fallback_fusion_elapsed, 3),
+                        'total_retrieval_s': round(total_retrieval_time, 3),
+                    },
                 }
             }
         
         # Filter summaries per-doc by semantic_score — BM25 can inflate ranking of
         # tangentially-related summaries (e.g. Tiền Lê mentions Đinh in passing),
         # so checking only the global max is not enough.
-        relevant_summary_docs = [
-            doc for doc in summary_docs
-            if doc.get('semantic_score', 0.0) >= min_summary_score
-        ]
+        semantic_margin = 0.06
+        max_summaries_in_scope = 3
+        top_semantic_score = max((doc.get('semantic_score', 0.0) for doc in summary_docs), default=0.0)
+        relevant_summary_docs = []
+        for doc in summary_docs:
+            semantic_score = doc.get('semantic_score', 0.0)
+            passes_threshold = semantic_score >= min_summary_score
+            within_top_margin = top_semantic_score - semantic_score <= semantic_margin
+            if passes_threshold or within_top_margin:
+                relevant_summary_docs.append(doc)
+            if len(relevant_summary_docs) >= max_summaries_in_scope:
+                break
+
         if not relevant_summary_docs:
             # max_semantic passed the global check above but no individual doc meets
             # the threshold (edge case) — fall back to top-1 to avoid empty scope
             relevant_summary_docs = summary_docs[:1]
 
         summary_ids = [doc['id'] for doc in relevant_summary_docs]
-        print(f"Scope: {len(summary_ids)}/{len(summary_docs)} summary documents (semantic ≥ {min_summary_score})")
+        print(
+            f"Scope: {len(summary_ids)}/{len(summary_docs)} summary documents "
+            f"(semantic ≥ {min_summary_score} or within {semantic_margin:.2f} of top semantic {top_semantic_score:.4f}, max {max_summaries_in_scope})"
+        )
         for doc in relevant_summary_docs:
             preview = doc.get('summary_content', '')[:60].replace('\n', ' ')
-            print(f"  ✅ {doc.get('semantic_score', 0):.4f}  {preview}...")
+            semantic_score = doc.get('semantic_score', 0.0)
+            reason = []
+            if semantic_score >= min_summary_score:
+                reason.append(f">= {min_summary_score}")
+            if top_semantic_score - semantic_score <= semantic_margin:
+                reason.append(f"top_margin <= {semantic_margin:.2f}")
+            print(f"  ✅ {semantic_score:.4f}  {preview}... [{' | '.join(reason)}]")
         for doc in summary_docs:
             if doc not in relevant_summary_docs:
                 preview = doc.get('summary_content', '')[:60].replace('\n', ' ')
                 print(f"  ❌ {doc.get('semantic_score', 0):.4f}  {preview}... (filtered out)")
         
-        # STEP 2: Check if summary docs have enough information
-        print(f"\n🧠 STEP 2: Check information sufficiency")
-        is_sufficient = self._check_info_sufficiency(question, summary_docs)
-        
-        # STEP 3: Decision point
-        if is_sufficient:
-            print(f"\n✅ STEP 3: Summary docs are sufficient - using them for answer")
-            return {
-                'docs': summary_docs,
-                'source': 'summary',
-                'metadata': {
-                    'summary_docs_count': len(summary_docs),
-                    'max_summary_score': max_score,
-                    'sufficient': True
-                }
+        # STEP 2: Direct scoped child chunk retrieval (skip summary sufficiency evaluation)
+        print(f"\n🔎 STEP 2: Search child chunks linked to relevant summaries")
+        scoped_child_started_at = time.perf_counter()
+        scoped_child_chunks = await self.search_service.hybrid_search(
+            query=question,
+            k=chunk_k,
+            bm25_weight=self.bm25_weight,
+            semantic_weight=self.semantic_weight,
+            rrf_k=self.rrf_k,
+            summary_ids=summary_ids
+        )
+        scoped_child_elapsed = time.perf_counter() - scoped_child_started_at
+        print(f"⏱️ STEP 2 done in {scoped_child_elapsed:.3f}s | chunks={len(scoped_child_chunks)}")
+
+        # STEP 3: Build broader context by lifting child chunks to parent chunks
+        print(f"\n📋 STEP 3: Retrieve parent chunks for context")
+        parent_context_started_at = time.perf_counter()
+        parent_chunks = self._get_parent_chunks_context(scoped_child_chunks)
+        parent_context_elapsed = time.perf_counter() - parent_context_started_at
+        print(f"⏱️ STEP 3 done in {parent_context_elapsed:.3f}s")
+
+        total_retrieval_time = time.perf_counter() - retrieval_started_at
+        print(f"✅ Retrieval complete (scoped summaries -> child chunks) | trace={trace} | total={total_retrieval_time:.3f}s")
+
+        return {
+            'docs': parent_chunks,
+            'source': 'parent_chunks_from_children',
+            'metadata': {
+                'summary_docs_count': len(summary_docs),
+                'max_summary_score': max_score,
+                'child_chunks_found': len(scoped_child_chunks),
+                'parent_chunks_returned': len(parent_chunks),
+                'scoped_to_summaries': len(summary_ids),
+                'trace_id': trace,
+                'retrieval_timing': {
+                    'step1_summary_search_s': round(step1_elapsed, 3),
+                    'step2_scoped_child_search_s': round(scoped_child_elapsed, 3),
+                    'step3_parent_context_s': round(parent_context_elapsed, 3),
+                    'total_retrieval_s': round(total_retrieval_time, 3),
+                },
             }
-        else:
-            print(f"\n🔄 STEP 3: Not sufficient - proceeding with query expansion")
-            
-            # Extract entity info for query expansion
-            # First get some child chunks from the relevant summaries for context
-            initial_chunks = self.search_service.hybrid_search(
-                query=question,
-                k=self.first_pass_k,
-                bm25_weight=self.bm25_weight,
-                semantic_weight=self.semantic_weight,
-                rrf_k=self.rrf_k,
-                summary_ids=summary_ids
-            )
-            
-            # Log the 12 chunks from pass 1
-            print(f"\n📦 PASS 1: Initial {len(initial_chunks)} chunks from scoped search:")
-            for i, chunk in enumerate(initial_chunks, 1):
-                # Build headers string
-                headers = []
-                if chunk.get('h1'): headers.append(chunk['h1'])
-                if chunk.get('h2'): headers.append(chunk['h2'])
-                if chunk.get('h3'): headers.append(chunk['h3'])
-                headers_str = " / ".join(headers) if headers else ""
-                
-                content_preview = chunk.get('content', '')[:150].replace('\n', ' ')
-                print(f"📄 Doc {i}:")
-                print(f"   Type: Child Chunk")
-                print(f"   Headers: {headers_str}")
-                print(f"   Preview: {content_preview}...")
-                print()
-            
-            info = self._extract_entity_info(question, initial_chunks)
-            entity = info.get("entity", "")
-            aliases = info.get("aliases") or []
-            keywords = info.get("keywords") or []
-            
-            print(f"🧠 Entity: {entity or '(none)'} | Aliases: {len(aliases)} | Keywords: {len(keywords)}")
-            
-            # Generate query variants
-            variants = self._make_variants(question, info)
-            print(f"🧩 Variants: {len(variants)}")
-            for i, v in enumerate(variants, 1):
-                print(f"   Q{i}: {v}")
-            
-            # STEP 4: Search child chunks with each variant (scoped to summaries)
-            print(f"\n🔎 STEP 4: Search child chunks with variants (scoped to summaries)")
-            all_results = []
-            variant_results = []  # Track results for each variant
-            
-            for i, variant in enumerate(variants, 1):
-                print(f"\n📝 Variant {i}/{len(variants)}: {variant}")
-                results = self.search_service.hybrid_search(
-                    query=variant,
-                    k=max(chunk_k, 20),
-                    bm25_weight=self.bm25_weight,
-                    semantic_weight=self.semantic_weight,
-                    rrf_k=self.rrf_k,
-                    summary_ids=summary_ids
-                )
-                all_results.append(results)
-                variant_results.append({
-                    'variant': variant,
-                    'top_3_chunks': results[:3]  # Store top 3 for this variant
-                })
-                print(f"  → {len(results)} child chunks")
-            
-            # STEP 5: RRF fusion of all variant results
-            print(f"\n📊 STEP 5: RRF fusion of {len(all_results)} result sets")
-            fused_child_chunks = self._rrf_fuse(all_results, rrf_k=self.rrf_k, top_k=chunk_k)
-            print(f"✅ Fused: {len(fused_child_chunks)} child chunks")
-            
-            # STEP 5.5: Get parent chunks from child chunks for context
-            print(f"\n📋 STEP 5.5: Retrieve parent chunks for context")
-            parent_chunks = self._get_parent_chunks_context(fused_child_chunks)
-            
-            # STEP 6: Return parent chunks for answer generation
-            return {
-                'docs': parent_chunks,
-                'source': 'parent_chunks_from_children',
-                'metadata': {
-                    'summary_docs_count': len(summary_docs),
-                    'max_summary_score': max_score,
-                    'sufficient': False,
-                    'variants_count': len(variants),
-                    'variants': variants,
-                    'variant_results': variant_results,
-                    'child_chunks_found': len(fused_child_chunks),
-                    'parent_chunks_returned': len(parent_chunks),
-                    'scoped_to_summaries': len(summary_ids)
-                }
-            }
+        }
     
-    def chat(
+    async def chat(
         self, 
         question: str, 
         document_ids: Optional[List[str]] = None,
@@ -798,19 +711,39 @@ CÂU HỎI: {question}
                 'metadata': Dict
             }
         """
+        trace = self._next_trace_id()
+        chat_started_at = time.perf_counter()
+        print(f"\n🟢 CHAT START | trace={trace}")
+
         # Use hierarchical retrieval workflow
         question = self._normalize_question(question)
-        result = self.retrieve_hierarchical(question, document_ids=document_ids)
+        print(f"🧭 CHAT[{trace}] retrieval started")
+        retrieval_started_at = time.perf_counter()
+        result = await self.retrieve_hierarchical(question, document_ids=document_ids, trace_id=trace)
+        retrieval_elapsed = time.perf_counter() - retrieval_started_at
+        print(f"🧭 CHAT[{trace}] retrieval done in {retrieval_elapsed:.3f}s")
+
         docs = result['docs']
         source = result['source']
         metadata = result['metadata']
         metadata['retrieval_method'] = 'hierarchical'
         
         if not docs:
+            total_elapsed = time.perf_counter() - chat_started_at
+            print(f"🔴 CHAT END | trace={trace} | no_docs | total={total_elapsed:.3f}s")
             return {
                 'answer': "Tôi không tìm thấy thông tin này trong tài liệu.",
                 'chunks': [],
-                'metadata': {**metadata, 'chunks_used': 0}
+                'metadata': {
+                    **metadata,
+                    'chunks_used': 0,
+                    'trace_id': trace,
+                    'timing': {
+                        'retrieval_s': round(retrieval_elapsed, 3),
+                        'generation_s': 0.0,
+                        'total_s': round(total_elapsed, 3),
+                    }
+                }
             }
         
         if verbose:
@@ -830,7 +763,8 @@ CÂU HỎI: {question}
                     print(f"   Preview: {doc.get('content', '')[:200]}...")
         
         # Generate answer based on source type
-        print("\n💬 Generating answer...")
+        print(f"\n💬 CHAT[{trace}] generating answer...")
+        generation_started_at = time.perf_counter()
         
         if source == 'summary':
             # Use summary documents - format differently
@@ -850,10 +784,15 @@ CÂU HỎI: {question}
             answer = self.rag_chain.invoke({"docs": docs, "question": question})
         
         answer = (answer or "").strip()
+        generation_elapsed = time.perf_counter() - generation_started_at
+        print(f"💬 CHAT[{trace}] generation done in {generation_elapsed:.3f}s")
         
         # Normalize fallback
         if not answer or ("không tìm thấy" in answer.lower() and "tài liệu" in answer.lower()):
             answer = "Tôi không tìm thấy thông tin này trong tài liệu."
+
+        total_elapsed = time.perf_counter() - chat_started_at
+        print(f"🟣 CHAT END | trace={trace} | total={total_elapsed:.3f}s")
         
         return {
             'answer': answer,
@@ -862,6 +801,12 @@ CÂU HỎI: {question}
                 **metadata,
                 'chunks_used': len(docs),
                 'source': source,
-                'model': getattr(self.llm, 'model', 'unknown')
+                'model': getattr(self.llm, 'model', 'unknown'),
+                'trace_id': trace,
+                'timing': {
+                    'retrieval_s': round(retrieval_elapsed, 3),
+                    'generation_s': round(generation_elapsed, 3),
+                    'total_s': round(total_elapsed, 3),
+                }
             }
         }

@@ -86,46 +86,56 @@ copy .env.example .env
 ### 2. Start Services
 
 ```bash
-docker-compose up -d --build
+python -m src.main
+```
+summary_documents (Tóm tắt)
+    ↓
+documents (Tài liệu gốc)
+    ↓
+parent_chunks (Chunks lớn)
+    ↓
+child_chunks (Chunks nhỏ - indexed)
 ```
 
-Hệ thống sẽ khởi động:
+### Chi tiết từng tầng:
 
-- **FastAPI** (port 8000)
-- **PostgreSQL** với pgvector + ParadeDB (port 5432)
-- **Redis** (port 6379)
-- **RQ Worker** (background processing)
-
-### 3. Access API
-
-Mở browser: **http://localhost:8000/docs**
+1. **SummaryDocument**: Tóm tắt ngắn gọn của document, dùng để xác định phạm vi tìm kiếm
+2. **Document**: Tài liệu gốc, metadata và tracking
+3. **ParentChunk**: Chunks lớn (context rộng) chứa nhiều child chunks
+4. **ChildChunk**: Chunks nhỏ được indexed, dùng để tìm kiếm chi tiết
 
 ---
 
-## 📋 Database Migrations
+## 🔄 Workflow Hierarchical Retrieval (6 bước)
 
-Chạy migrations để tạo schema 4 tầng:
+### **Bước 1: Tìm kiếm Summary Documents**
 
-### Windows (PowerShell):
+- Hybrid search (BM25 + Semantic) trên `summary_documents`
+- Xác định phạm vi tài liệu liên quan
+- **Fallback**: Nếu không tìm thấy hoặc score < 0.3 → tìm trực tiếp trên child chunks
 
-```powershell
-.\run_migration.ps1
-```
+### **Bước 2: Kiểm tra đủ thông tin**
 
-### Linux/Mac:
+- Format summary context và hỏi LLM: "Có đủ thông tin để trả lời không?"
+- LLM trả về: `{sufficient: true/false, reason: "..."}`
 
-```bash
-./run_migration.sh
-```
+### **Bước 3: Quyết định**
 
-### Manual:
+- **Nếu đủ**: Dùng summary để trả lời → Kết thúc
+- **Nếu không đủ**: Tiến hành query expansion
 
-```bash
-psql -h 127.0.0.1 -p 5433 -U rag_user -d rag_db -f migrations/create_bm25_index.sql
-psql -h 127.0.0.1 -p 5433 -U rag_user -d rag_db -f migrations/update_embedding_dimension_768.sql
-```
+### **Bước 4: Query Expansion**
 
----
+- Trích xuất: entities, aliases, keywords
+- Tạo query variants (biến thể câu hỏi)
+
+### **Bước 5: Scoped Search trên Child Chunks**
+
+- Tìm kiếm **chỉ trong phạm vi** child chunks thuộc summary docs đã tìm
+- Dùng từng query variant
+- Áp dụng RRF (Reciprocal Rank Fusion) để tổng hợp kết quả
+
+### **Bước 6: Tạo câu trả lời**
 
 ## 📤 Upload Workflow
 
@@ -402,6 +412,26 @@ EMBEDDING_DIMENSION=768
 ### Query Variants
 
 LLM tự động tạo biến thể câu hỏi để tăng khả năng tìm kiếm
+
+### Fallback Mechanism
+
+Nếu không tìm thấy summary docs hoặc score thấp → tìm kiếm trực tiếp trên toàn bộ child chunks
+
+---
+
+## 🚀 Production Tips
+
+1. **Monitoring**: Thêm Prometheus + Grafana để monitor performance
+2. **Caching**: Redis cache cho frequent queries
+3. **Load Balancing**: Multiple workers cho heavy loads
+4. **Backup**: Định kỳ backup PostgreSQL database
+5. **Rate Limiting**: Thêm rate limiter cho API endpoints
+
+---
+
+## 📄 License
+
+MIT License
 
 ### Fallback Mechanism
 

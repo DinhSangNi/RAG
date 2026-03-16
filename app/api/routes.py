@@ -5,15 +5,18 @@ Handles document processing, search, and chat endpoints
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Request, Form
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Annotated
 import os
 import uuid
 import hashlib
+import re
 from pathlib import Path
 import aiofiles
+import wikipedia
 
 from app.database import get_db
 from app.database.models import Document, ChildChunk, SummaryDocument
+from app.config import settings
 from app.api.schemas import (
     JobResponse,
     DocumentResponse,
@@ -25,7 +28,11 @@ from app.api.schemas import (
     ChatResponse,
     FileUploadResult,
     MultiFileUploadResponse,
-    UpdateSummaryResponse
+    UpdateSummaryResponse,
+    UpdateSummaryTextRequest,
+    UpdateSummaryTextResponse,
+    WikipediaFetchRequest,
+    WikipediaFetchResponse,
 )
 from app.services.queue_service import queue_process_job, get_job_status
 from app.dependencies import get_search_service, get_rag_service
@@ -72,6 +79,13 @@ def calculate_file_hash(file_path: str) -> str:
     return sha256_hash.hexdigest()
 
 
+def normalize_bm25_source_text(text: str) -> str:
+    """Normalize raw text before Vietnamese segmentation for consistent BM25 indexing."""
+    # Remove punctuation/operators and collapse whitespace while preserving unicode word chars.
+    sanitized = re.sub(r"[^\w\s]", " ", text or "", flags=re.UNICODE)
+    return re.sub(r"\s+", " ", sanitized).strip()
+
+
 async def calculate_upload_file_hash(file: UploadFile) -> str:
     """Tính SHA256 hash của upload file content"""
     sha256_hash = hashlib.sha256()
@@ -97,6 +111,21 @@ def ensure_temp_directory() -> Path:
     return temp_dir
 
 
+def ensure_wikipedia_directory() -> Path:
+    """Ensure the Wikipedia raw-data directory exists and return its path."""
+    wiki_dir = Path(settings.RAW_DIR) / "wikipedia"
+    wiki_dir.mkdir(parents=True, exist_ok=True)
+    return wiki_dir
+
+
+def build_wikipedia_html_filename(title: str) -> str:
+    """Create a filesystem-safe HTML filename from a Wikipedia page title."""
+    normalized = re.sub(r"\s+", "_", (title or "").strip())
+    safe_title = re.sub(r'[<>:"/\\|?*]+', '_', normalized)
+    safe_title = safe_title.strip('._') or f"wiki_{uuid.uuid4().hex[:8]}"
+    return f"{safe_title}.html"
+
+
 def check_duplicate_document(db: Session, file_path: str, file_size: int, content_hash: str) -> Document | None:
     """Kiểm tra xem đã có document trùng lặp dựa trên file_size và content_hash
     
@@ -118,11 +147,40 @@ def check_duplicate_document(db: Session, file_path: str, file_size: int, conten
     return None
 
 
-@router.post("/process", response_model=MultiFileUploadResponse)
+@router.post(
+    "/process",
+    response_model=MultiFileUploadResponse,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["files"],
+                        "properties": {
+                            "files": {
+                                "type": "array",
+                                "items": {"type": "string", "format": "binary"},
+                                "description": "Upload one or more files",
+                            },
+                            "summary_id": {
+                                "type": "string",
+                                "nullable": True,
+                            },
+                            "chunk_size": {"type": "integer", "default": 800},
+                            "chunk_overlap": {"type": "integer", "default": 150},
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
 async def process_document(
     request: Request,
+    files: Annotated[List[UploadFile], File(..., description="Upload one or more files")],
     summary_id: Optional[str] = Form(None),
-    files: List[UploadFile] = File(...),
     chunk_size: int = Form(800),
     chunk_overlap: int = Form(150),
     db: Session = Depends(get_db)
@@ -298,10 +356,37 @@ async def process_document(
     )
 
 
-@router.post("/process-summary", response_model=MultiFileUploadResponse)
+@router.post(
+    "/process-summary",
+    response_model=MultiFileUploadResponse,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["files"],
+                        "properties": {
+                            "files": {
+                                "type": "array",
+                                "items": {"type": "string", "format": "binary"},
+                                "description": "Upload one or more summary files",
+                            },
+                            "document_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
 async def process_summary_document(
     request: Request,
-    files: List[UploadFile] = File(...),
+    files: Annotated[List[UploadFile], File(..., description="Upload one or more summary files")],
     document_ids: List[str] = Form([]),
     db: Session = Depends(get_db)
 ):
@@ -494,6 +579,86 @@ async def process_summary_document(
     )
 
 
+@router.post("/process-summary-single", response_model=MultiFileUploadResponse)
+async def process_summary_document_single(
+    request: Request,
+    file: UploadFile = File(..., description="Upload a single summary file"),
+    document_ids: List[str] = Form([]),
+    db: Session = Depends(get_db),
+):
+    """Fallback endpoint for Swagger UIs that cannot render array-of-file inputs correctly."""
+    return await process_summary_document(
+        request=request,
+        files=[file],
+        document_ids=document_ids,
+        db=db,
+    )
+
+
+@router.post("/wikipedia/fetch-html", response_model=WikipediaFetchResponse)
+async def fetch_wikipedia_html(payload: WikipediaFetchRequest):
+    """
+    Resolve a Wikipedia page by title via the `wikipedia` library,
+    download its HTML, and save it to `data/raw_data/wikipedia`.
+    """
+    title = (payload.title or "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="title không được để trống")
+
+    wikipedia.set_lang(payload.language)
+
+    try:
+        page = wikipedia.page(title, auto_suggest=payload.auto_suggest)
+    except wikipedia.exceptions.DisambiguationError as e:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"Tiêu đề mơ hồ: {title}",
+                "options": e.options[:10],
+            },
+        )
+    except wikipedia.exceptions.PageError:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy trang Wikipedia: {title}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi resolve Wikipedia page: {str(e)}")
+
+    page_html_getter = getattr(page, "html", None)
+    if not callable(page_html_getter):
+        raise HTTPException(
+            status_code=500,
+            detail="Thư viện wikipedia hiện tại không hỗ trợ lấy HTML trực tiếp"
+        )
+
+    try:
+        html_content = (page_html_getter() or "").strip()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Không lấy được HTML từ thư viện wikipedia: {str(e)}")
+
+    if not html_content:
+        raise HTTPException(status_code=502, detail="Thư viện wikipedia trả về HTML rỗng")
+
+    wiki_dir = ensure_wikipedia_directory()
+    file_name = build_wikipedia_html_filename(page.title)
+    file_path = wiki_dir / file_name
+
+    try:
+        file_path.write_text(html_content, encoding="utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu file HTML: {str(e)}")
+
+    normalized_path = normalize_file_path(str(file_path))
+
+    return WikipediaFetchResponse(
+        requested_title=title,
+        resolved_title=page.title,
+        language=payload.language,
+        page_url=page.url,
+        file_path=normalized_path,
+        file_name=file_name,
+        message="Wikipedia HTML fetched successfully",
+    )
+
+
 @router.post("/update-summary/{summary_id}", response_model=UpdateSummaryResponse)
 async def update_summary_document(
     summary_id: str,
@@ -653,6 +818,72 @@ async def update_summary_document(
     )
 
 
+@router.put("/summaries/{summary_id}/text", response_model=UpdateSummaryTextResponse)
+async def update_summary_text_direct(
+    summary_id: str,
+    payload: UpdateSummaryTextRequest,
+    db: Session = Depends(get_db),
+    search_service: SearchService = Depends(get_search_service),
+):
+    """
+    Cập nhật trực tiếp summary document bằng summary text (không upload file, không queue).
+
+    Endpoint này cập nhật đồng bộ các trường:
+    - summary_content
+    - bm25_text
+    - vector
+    - content_hash
+    - status
+    """
+    summary = db.query(SummaryDocument).filter(SummaryDocument.id == summary_id).first()
+    if not summary:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Summary document không tồn tại: {summary_id}"
+        )
+
+    summary_text = (payload.summary_text or "").strip()
+    if not summary_text:
+        raise HTTPException(status_code=400, detail="summary_text không được để trống")
+
+    new_content_hash = hashlib.sha256(summary_text.encode("utf-8")).hexdigest()
+    current_hash = getattr(summary, "content_hash", None)
+
+    if current_hash and str(current_hash) == str(new_content_hash):
+        return UpdateSummaryTextResponse(
+            status="unchanged",
+            summary_id=str(summary.id),
+            message="Content không thay đổi, không cần update"
+        )
+
+    try:
+        normalized_for_bm25 = normalize_bm25_source_text(summary_text)
+        bm25_text = search_service.segmentation_service.segment(normalized_for_bm25)
+        embedding_vector = search_service.embedding_service.embed_text(summary_text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Không thể cập nhật embedding/bm25_text: {str(e)}")
+
+    summary.summary_content = summary_text
+    summary.bm25_text = bm25_text
+    summary.vector = embedding_vector
+    summary.content_hash = new_content_hash
+    summary.status = "completed"
+
+    if payload.metadata:
+        current_meta = summary.meta_data or {}
+        current_meta.update(payload.metadata)
+        summary.meta_data = current_meta
+
+    db.commit()
+    db.refresh(summary)
+
+    return UpdateSummaryTextResponse(
+        status="updated",
+        summary_id=str(summary.id),
+        message="Summary document updated successfully"
+    )
+
+
 @router.get("/status/{job_id}", response_model=JobResponse)
 async def get_job_status_endpoint(job_id: str):
     """
@@ -775,7 +1006,7 @@ async def rag_chat(
     """
     RAG chat with advanced retrieval and answer generation
     """
-    result = rag_service.chat(
+    result = await rag_service.chat(
         question=request.question,
         document_ids=request.document_ids,
         verbose=request.verbose

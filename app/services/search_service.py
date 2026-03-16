@@ -5,10 +5,13 @@ Implements RRF (Reciprocal Rank Fusion) for combining BM25 and semantic search
 
 import re
 import math
+import asyncio
+import time
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
 from app.database.models import ChildChunk, SummaryDocument, child_chunk_summary_association
+from app.database.connection import SessionLocal
 from app.services.embedding_service import get_embedding_service
 from app.services.segmentation_service import get_segmentation_service
 
@@ -281,7 +284,53 @@ class SearchService:
             for r in results
         ]
 
-    def hybrid_search(
+    def _bm25_search_isolated_session(
+        self,
+        query: str,
+        k: int,
+        summary_ids: Optional[List[str]],
+        use_segmentation: bool
+    ) -> List[Dict[str, Any]]:
+        """Run BM25 in a dedicated DB session for thread-safe parallel execution."""
+        db = SessionLocal()
+        try:
+            service = SearchService(
+                db,
+                embedding_service=self.embedding_service,
+                segmentation_service=self.segmentation_service,
+            )
+            return service.bm25_search(
+                query=query,
+                k=k,
+                summary_ids=summary_ids,
+                use_segmentation=use_segmentation,
+            )
+        finally:
+            db.close()
+
+    def _semantic_search_isolated_session(
+        self,
+        query: str,
+        k: int,
+        summary_ids: Optional[List[str]],
+    ) -> List[Dict[str, Any]]:
+        """Run semantic search in a dedicated DB session for thread-safe parallel execution."""
+        db = SessionLocal()
+        try:
+            service = SearchService(
+                db,
+                embedding_service=self.embedding_service,
+                segmentation_service=self.segmentation_service,
+            )
+            return service.semantic_search(
+                query=query,
+                k=k,
+                summary_ids=summary_ids,
+            )
+        finally:
+            db.close()
+
+    async def hybrid_search(
         self,
         query: str,
         k: int = 10,
@@ -318,16 +367,32 @@ class SearchService:
         print(f"Query: {query}")
         print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
         print(f"BM25_k={bm25_k}, Semantic_k={semantic_k}, RRF_k={rrf_k}")
+        hybrid_started_at = time.perf_counter()
 
-        # Get BM25 results with segmentation
-        bm25_results = self.bm25_search(query, k=bm25_k, summary_ids=summary_ids, use_segmentation=use_segmentation)
+        # Run BM25 and semantic search concurrently.
+        retrieval_started_at = time.perf_counter()
+        bm25_task = asyncio.to_thread(
+            self._bm25_search_isolated_session,
+            query,
+            bm25_k,
+            summary_ids,
+            use_segmentation,
+        )
+        semantic_task = asyncio.to_thread(
+            self._semantic_search_isolated_session,
+            query,
+            semantic_k,
+            summary_ids,
+        )
+        bm25_results, semantic_results = await asyncio.gather(bm25_task, semantic_task)
+        retrieval_elapsed = time.perf_counter() - retrieval_started_at
+        print(f"⏱️ Parallel retrieval done in {retrieval_elapsed:.3f}s")
+
         print(f"📄 BM25: {len(bm25_results)} results")
-
-        # Get semantic results
-        semantic_results = self.semantic_search(query, k=semantic_k, summary_ids=summary_ids)
         print(f"🎯 Semantic: {len(semantic_results)} results")
 
         # RRF fusion
+        fusion_started_at = time.perf_counter()
         scores: Dict[int, Dict[str, Any]] = {}
 
         # Add BM25 scores
@@ -350,7 +415,11 @@ class SearchService:
         for i, result in enumerate(results):
             result['fused_score'] = fused[i]['score']
 
+        fusion_elapsed = time.perf_counter() - fusion_started_at
+        total_elapsed = time.perf_counter() - hybrid_started_at
+
         print(f"✅ Fused: {len(results)} results")
+        print(f"⏱️ Fusion: {fusion_elapsed:.3f}s | Total hybrid: {total_elapsed:.3f}s")
         if results:
             top_result = results[0]
             headers = f"{top_result.get('h1', '')} / {top_result.get('h2', '')}"
@@ -472,7 +541,53 @@ class SearchService:
             for r in results
         ]
 
-    def hybrid_search_summaries(
+    def _bm25_search_summaries_isolated_session(
+        self,
+        query: str,
+        k: int,
+        summary_ids: Optional[List[str]],
+        use_segmentation: bool,
+    ) -> List[Dict[str, Any]]:
+        """Run summary BM25 in a dedicated DB session for thread-safe parallel execution."""
+        db = SessionLocal()
+        try:
+            service = SearchService(
+                db,
+                embedding_service=self.embedding_service,
+                segmentation_service=self.segmentation_service,
+            )
+            return service.bm25_search_summaries(
+                query=query,
+                k=k,
+                summary_ids=summary_ids,
+                use_segmentation=use_segmentation,
+            )
+        finally:
+            db.close()
+
+    def _semantic_search_summaries_isolated_session(
+        self,
+        query: str,
+        k: int,
+        summary_ids: Optional[List[str]],
+    ) -> List[Dict[str, Any]]:
+        """Run summary semantic search in a dedicated DB session for thread-safe parallel execution."""
+        db = SessionLocal()
+        try:
+            service = SearchService(
+                db,
+                embedding_service=self.embedding_service,
+                segmentation_service=self.segmentation_service,
+            )
+            return service.semantic_search_summaries(
+                query=query,
+                k=k,
+                summary_ids=summary_ids,
+            )
+        finally:
+            db.close()
+
+    async def hybrid_search_summaries(
         self,
         query: str,
         k: int = 5,
@@ -500,19 +615,34 @@ class SearchService:
         print(f"\n🔍 HYBRID SEARCH SUMMARIES")
         print(f"Query: {query}")
         print(f"Weights: BM25={bm25_weight}, Semantic={semantic_weight}")
+        hybrid_started_at = time.perf_counter()
 
-        # Get BM25 results with segmentation
-        bm25_results = self.bm25_search_summaries(query, k=max(k, 10), summary_ids=summary_ids, use_segmentation=use_segmentation)
+        retrieval_started_at = time.perf_counter()
+        bm25_task = asyncio.to_thread(
+            self._bm25_search_summaries_isolated_session,
+            query,
+            max(k, 10),
+            summary_ids,
+            use_segmentation,
+        )
+        semantic_task = asyncio.to_thread(
+            self._semantic_search_summaries_isolated_session,
+            query,
+            max(k, 10),
+            summary_ids,
+        )
+        bm25_results, semantic_results = await asyncio.gather(bm25_task, semantic_task)
+        retrieval_elapsed = time.perf_counter() - retrieval_started_at
+        print(f"⏱️ Parallel summary retrieval done in {retrieval_elapsed:.3f}s")
+
         print(f"📄 BM25 Summary: {len(bm25_results)} results")
-
-        # Get semantic results
-        semantic_results = self.semantic_search_summaries(query, k=max(k, 10), summary_ids=summary_ids)
         print(f"🎯 Semantic Summary: {len(semantic_results)} results")
 
         # Build semantic score map for threshold evaluation
         semantic_score_map = {doc['id']: doc['score'] for doc in semantic_results}
 
         # RRF fusion
+        fusion_started_at = time.perf_counter()
         scores: Dict[str, Dict[str, Any]] = {}
 
         # Add BM25 scores
@@ -540,8 +670,11 @@ class SearchService:
 
         max_score = results[0]['fused_score'] if results else 0.0
         max_semantic = results[0]['semantic_score'] if results else 0.0
+        fusion_elapsed = time.perf_counter() - fusion_started_at
+        total_elapsed = time.perf_counter() - hybrid_started_at
 
         print(f"✅ Fused Summaries: {len(results)} results")
         print(f"Max RRF score: {round(max_score, 4)} | Max semantic score: {round(max_semantic, 4)}")
+        print(f"⏱️ Fusion: {fusion_elapsed:.3f}s | Total summary hybrid: {total_elapsed:.3f}s")
 
         return results
