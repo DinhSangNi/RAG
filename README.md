@@ -1,25 +1,89 @@
-# 🚀 RAG System - Hệ thống Hỏi Đáp Thông Minh
+# 🚀 Hierarchical RAG System - Production-Ready Microservice
 
-Hệ thống RAG (Retrieval-Augmented Generation) sử dụng Hybrid Search (BM25 + Semantic) và Google Gemini để trả lời câu hỏi dựa trên dữ liệu Wikipedia.
+Hệ thống RAG (Retrieval-Augmented Generation) 4 tầng với kiến trúc phân cấp, được đóng gói thành **Production-Ready Microservice** với FastAPI, PostgreSQL (pgvector + ParadeDB), Redis Queue và Docker.
 
-## 📋 Yêu Cầu
+## 🌟 Highlights
 
-```bash
-pip install langchain langchain-community langchain-google-genai
-pip install chromadb
-pip install beautifulsoup4 requests
-pip install rank_bm25
+- ✅ **4-Tier Hierarchical RAG** - Kiến trúc phân tầng: Summary Documents → Documents → Parent Chunks → Child Chunks
+- ✅ **Intelligent Retrieval** - 6-step workflow với query expansion và scoped search
+- ✅ **RESTful API** với FastAPI
+- ✅ **Hybrid Search** - BM25 (ParadeDB) + Semantic Search (pgvector)
+- ✅ **Background Processing** với Redis Queue (RQ)
+- ✅ **Multi-file Upload** - Upload nhiều files cùng lúc
+- ✅ **Duplicate Detection** - SHA256 hash để tránh trùng lặp
+- ✅ **Docker Ready** - Deploy một lệnh với docker-compose
+- ✅ **Auto Documentation** - Swagger UI tích hợp sẵn
+
+---
+
+## 📊 Kiến trúc 4 tầng
+
+```
+summary_documents (Tóm tắt)
+    ↓
+documents (Tài liệu gốc)
+    ↓
+parent_chunks (Chunks lớn)
+    ↓
+child_chunks (Chunks nhỏ - indexed)
 ```
 
-hoặc chạy
+### Chi tiết từng tầng:
+
+1. **SummaryDocument**: Tóm tắt ngắn gọn của document, dùng để xác định phạm vi tìm kiếm
+2. **Document**: Tài liệu gốc, metadata và tracking
+3. **ParentChunk**: Chunks lớn (context rộng) chứa nhiều child chunks
+4. **ChildChunk**: Chunks nhỏ được indexed, dùng để tìm kiếm chi tiết
+
+---
+
+## 🔄 Workflow Hierarchical Retrieval (6 bước)
+
+### **Bước 1: Tìm kiếm Summary Documents**
+
+- Hybrid search (BM25 + Semantic) trên `summary_documents`
+- Xác định phạm vi tài liệu liên quan
+- **Fallback**: Nếu không tìm thấy hoặc score < 0.3 → tìm trực tiếp trên child chunks
+
+### **Bước 2: Kiểm tra đủ thông tin**
+
+- Format summary context và hỏi LLM: "Có đủ thông tin để trả lời không?"
+- LLM trả về: `{sufficient: true/false, reason: "..."}`
+
+### **Bước 3: Quyết định**
+
+- **Nếu đủ**: Dùng summary để trả lời → Kết thúc
+- **Nếu không đủ**: Tiến hành query expansion
+
+### **Bước 4: Query Expansion**
+
+- Trích xuất: entities, aliases, keywords
+- Tạo query variants (biến thể câu hỏi)
+
+### **Bước 5: Scoped Search trên Child Chunks**
+
+- Tìm kiếm **chỉ trong phạm vi** child chunks thuộc summary docs đã tìm
+- Dùng từng query variant
+- Áp dụng RRF (Reciprocal Rank Fusion) để tổng hợp kết quả
+
+### **Bước 6: Tạo câu trả lời**
+
+- Gửi top chunks + câu hỏi cho LLM
+- LLM tạo câu trả lời cuối cùng
+
+## 🚀 Quick Start
+
+### 1. Setup Environment
 
 ```bash
-pip install -r requirements.txt
+# Copy environment template
+copy .env.example .env
+
+# Edit .env và thêm:
+# GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-## 🏃 Cách Chạy Chương Trình
-
-### Chạy Menu Chính
+### 2. Start Services
 
 ```bash
 python -m src.main
@@ -79,228 +143,298 @@ CHỌN CHỨC NĂNG:
 
 ---
 
-### Option 3: 💬 RAG Chat (Interactive)
+## 📤 Upload Workflow
 
-**Chức năng:** Hỏi đáp tương tác với AI
+### **Bước 1: Upload Summary Document** (Bắt buộc trước)
 
-**Yêu cầu:** Phải chạy Option 2 trước để có vector DB
-
-**Cách sử dụng:**
-
-```
-❓ Câu hỏi: Hồ Chí Minh sinh năm nào?
-💡 TRẢ LỜI: Hồ Chí Minh sinh vào ngày 19 tháng 5 năm 1890.
-
-❓ Câu hỏi: Võ Nguyên Giáp sinh ngày nào?
-💡 TRẢ LỜI: Võ Nguyên Giáp sinh ngày 25 tháng 8 năm 1911.
+```bash
+curl -X POST "http://localhost:8000/api/v1/process-summary" \
+  -F "files=@summary.html"
 ```
 
-**Lệnh đặc biệt:**
+Response:
 
-- `verbose` - Bật/tắt hiển thị context được retrieve (các chunks được get ra)
-- `quit` hoặc `exit` - Thoát chương trình
+```json
+{
+  "total_files": 1,
+  "results": [
+    {
+      "filename": "summary.html",
+      "status": "processing",
+      "job_id": "summary_abc123",
+      "document_id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+  ]
+}
+```
 
-**Tham số:**
+**Lưu lại `document_id` (đây là `summary_id` cho bước sau)**
 
-- **Model:** gemini-2.5-flash-lite
-- **Top K:** 10 chunks
-- **BM25 Weight:** 0.5
-- **Semantic Weight:** 0.5
+### **Bước 2: Upload Regular Documents**
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/process" \
+  -F "summary_id=550e8400-e29b-41d4-a716-446655440000" \
+  -F "files=@document1.html" \
+  -F "files=@document2.html" \
+  -F "chunk_size=800" \
+  -F "chunk_overlap=150"
+```
+
+Response:
+
+```json
+{
+  "total_files": 2,
+  "results": [
+    {
+      "filename": "document1.html",
+      "status": "processing",
+      "job_id": "process_xyz789",
+      "document_id": "660e8400-e29b-41d4-a716-446655440001"
+    }
+  ]
+}
+```
 
 ---
 
-### Option 4: 🚀 Chạy Cả Hai (Full Pipeline)
+## 🔍 API Endpoints
 
-**Chức năng:** Chạy tuần tự Option 1 → Option 2 → Option 3
+### Upload Endpoints
 
-**Quy trình:**
+| Endpoint                              | Method | Mô tả                    | Params                                                      |
+| ------------------------------------- | ------ | ------------------------ | ----------------------------------------------------------- |
+| `/api/v1/process-summary`             | POST   | Upload summary documents | files (multipart)                                           |
+| `/api/v1/update-summary/{summary_id}` | POST   | Update summary document  | summary_id (path), file (multipart)                         |
+| `/api/v1/process`                     | POST   | Upload regular documents | **summary_id** (required), files, chunk_size, chunk_overlap |
 
-1. Chuẩn bị data từ Wikipedia
-2. Chunking và lưu vào Vector DB
-3. Mở RAG Chat để hỏi đáp
+### Query Endpoints
 
-**Phù hợp cho:** Lần đầu chạy hoặc muốn cập nhật toàn bộ dữ liệu
+| Endpoint       | Method | Mô tả                               |
+| -------------- | ------ | ----------------------------------- |
+| `/api/v1/chat` | POST   | RAG chat với hierarchical retrieval |
+
+### Management Endpoints
+
+| Endpoint                  | Method | Mô tả               |
+| ------------------------- | ------ | ------------------- |
+| `/api/v1/status/{job_id}` | GET    | Kiểm tra job status |
+| `/api/v1/documents`       | GET    | List documents      |
+| `/api/v1/documents/{id}`  | GET    | Get document detail |
+| `/api/v1/documents/{id}`  | DELETE | Delete document     |
 
 ---
 
-## 📁 Cấu Trúc Thư Mục
+## 💬 RAG Chat Example
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Hồ Chí Minh sinh năm nào?",
+    "document_ids": null,
+    "verbose": true
+  }'
+```
+
+Response:
+
+```json
+{
+  "question": "Hồ Chí Minh sinh năm nào?",
+  "answer": "Hồ Chí Minh sinh năm 1890 tại làng Kim Liên, Nghệ An.",
+  "metadata": {
+    "retrieval_method": "hierarchical",
+    "summary_docs_found": 2,
+    "sufficient_from_summaries": false,
+    "query_variants": ["Năm sinh Hồ Chí Minh", "Bác Hồ sinh năm nào"],
+    "child_chunks_retrieved": 5,
+    "total_time_ms": 1234
+  }
+}
+```
+
+---
+
+## 🗂️ Project Structure
 
 ```
 RAG/
-├── data/
-│   ├── raw_data/wikipedia/          # HTML gốc từ Wikipedia
-│   ├── processed_data/              # File Markdown đã xử lý
-│   └── chroma_db/                   # Vector database
-│       ├── chroma.sqlite3
-│       └── knowledge_base_chunks.pkl
-├── src/
-│   ├── main.py                      # File chính
-│   ├── rag_chat.py                  # RAG Chat logic
-│   ├── chunking/
-│   │   └── text_chunker.py          # Chunking logic
-│   ├── ingestion/
-│   │   └── get_data_from_wikipedia.py
-│   └── preprocessing/
-│       ├── html_cleaner.py
-│       └── normalize_markdown.py
-└── README.md
+├── app/
+│   ├── api/
+│   │   ├── routes.py          # API endpoints
+│   │   └── schemas.py         # Pydantic models
+│   ├── database/
+│   │   ├── models.py          # SQLAlchemy models (4-tier)
+│   │   └── connection.py      # DB connection
+│   ├── services/
+│   │   ├── chunking_service.py    # Chunking logic
+│   │   ├── embedding_service.py   # Gemini embeddings
+│   │   ├── search_service.py      # Hybrid search (BM25 + Semantic)
+│   │   ├── rag_service.py         # Hierarchical RAG workflow
+│   │   └── queue_service.py       # Redis queue
+│   └── workers/
+│       └── process_worker.py      # Background processing
+├── migrations/
+│   ├── create_bm25_index.sql              # ParadeDB BM25 index
+│   └── update_embedding_dimension_768.sql # Update to 768-dim embeddings
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
 ```
 
-## ⚙️ Cấu Hình
+---
 
-### Hybrid Search Weights
+## 📊 Database Schema
 
-Trong `src/rag_chat.py`, dòng 152:
+### summary_documents
 
-```python
-bm25_weight=0.5,      # Keyword search
-semantic_weight=0.5   # Semantic search
+```sql
+- id (UUID, PK)
+- file_path (TEXT)
+- file_name (TEXT)
+- content (TEXT)
+- embedding (VECTOR(768))
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
 ```
 
-**Điều chỉnh:**
+### documents
 
-- Tăng `bm25_weight` → Ưu tiên khớp từ khóa chính xác
-- Tăng `semantic_weight` → Ưu tiên hiểu nghĩa ngữ cảnh
-
-### Chunk Size
-
-Trong `src/main.py`, dòng 73:
-
-```python
-chunker = HybridSectionChunker(chunk_size=800, chunk_overlap=150)
+```sql
+- id (UUID, PK)
+- summary_id (UUID, FK → summary_documents)
+- file_path (TEXT)
+- file_name (TEXT)
+- source_type (TEXT)
+- status (TEXT)
+- file_size (INTEGER)
+- file_hash (TEXT, UNIQUE)
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
 ```
 
-**Tham số:**
+### parent_chunks
 
-- `chunk_size`: Kích thước chunk tối đa (ký tự)
-- `chunk_overlap`: Số ký tự chồng lắp giữa các chunk
-
-## 🐛 Xử Lý Lỗi
-
-### Lỗi: File pkl không tồn tại
-
-```
-❌ Lỗi: [Errno 2] No such file or directory: 'data/chroma_db\\knowledge_base_chunks.pkl'
-```
-
-**Giải pháp:** Chạy Option 2 để tạo vector DB
-
-### Lỗi: Không trả lời được câu hỏi
-
-**Nguyên nhân:** Query không match với chunks
-
-**Giải pháp:**
-
-1. Bật `verbose` mode để xem context
-2. Điều chỉnh weights (tăng semantic_weight)
-3. Tăng `top_k` để retrieve nhiều chunks hơn
-
-### Lỗi: LangChainDeprecationWarning
-
-```
-LangChainDeprecationWarning: The class `Chroma` was deprecated...
+```sql
+- id (SERIAL, PK)
+- document_id (UUID, FK → documents)
+- summary_id (UUID, FK → summary_documents)
+- content (TEXT)
+- chunk_index (INTEGER)
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
 ```
 
-**Giải pháp:**
+### child_chunks
 
-```bash
-pip install -U langchain-chroma
+```sql
+- id (SERIAL, PK)
+- document_id (UUID, FK → documents)
+- parent_id (INTEGER, FK → parent_chunks)
+- summary_id (UUID, FK → summary_documents)
+- content (TEXT)
+- embedding (VECTOR(768))
+- chunk_index (INTEGER)
+- section_id (INTEGER)
+- h1, h2, h3 (TEXT)
+- meta_data (JSONB)
+- created_at (TIMESTAMP)
 ```
 
-Sau đó thay đổi import:
+**Indexes:**
 
-```python
-from langchain_chroma import Chroma
+- ParadeDB BM25 index trên `child_chunks.content`
+- pgvector HNSW index trên `child_chunks.embedding`
+- pgvector HNSW index trên `summary_documents.embedding`
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables (.env)
+
+```env
+# Gemini API
+GEMINI_API_KEY=your_api_key_here
+
+# Database
+DATABASE_URL=postgresql://rag_user:rag_password@db:5432/rag_db
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Chunking
+DEFAULT_CHUNK_SIZE=800
+DEFAULT_CHUNK_OVERLAP=150
+
+# Embedding
+EMBEDDING_MODEL=models/text-embedding-004
+EMBEDDING_DIMENSION=768
 ```
 
-## 📝 Ví Dụ Câu Hỏi
+---
 
-```
-✅ Hồ Chí Minh sinh năm nào?
-✅ Võ Nguyên Giáp sinh ngày nào?
-✅ Phạm Văn Đồng là ai?
-✅ Hồ Chí Minh có tên khai sinh là gì?
-✅ Võ Nguyên Giáp tham gia trận chiến nào?
-✅ Hồ Chí Minh đã đi qua những nước nào?
-```
+## 🎯 Key Features
 
-## 🔧 API Key
+### 1. **Hierarchical Retrieval**
 
-File sử dụng Google Gemini API. API key được hardcode trong:
+- Tìm kiếm thông minh qua nhiều tầng
+- Giảm nhiễu thông tin
+- Tăng độ chính xác
 
-- `src/chunking/text_chunker.py` (line 12)
-- `src/rag_chat.py` (line 11)
+### 2. **Scoped Search**
 
-**Khuyến nghị:** Chuyển sang dùng biến môi trường:
+- Child chunks được giới hạn trong phạm vi summary documents
+- Không tìm kiếm trên toàn bộ corpus → nhanh hơn
 
-```python
-import os
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-```
+### 3. **Query Expansion**
 
-## 🎯 Kiến Trúc Hệ Thống
+- LLM tự động tạo query variants
+- Trích xuất entities, aliases
+- Tăng recall rate
 
-### 1. Data Pipeline
+### 4. **Hybrid Search**
 
-```
-Wikipedia → HTML → Cleaned HTML → Normalized Markdown → Chunks
-```
+- **BM25** (ParadeDB): Keyword matching
+- **Semantic** (pgvector): Cosine similarity
+- **RRF**: Fusion algorithm tổng hợp kết quả
 
-### 2. Chunking Strategy
+### 5. **Background Processing**
 
-- **Markdown Header Splitter**: Tách theo headers (h1, h2)
-- **Recursive Character Splitter**: Tách sections lớn thành chunks nhỏ hơn
-- **Metadata**: Lưu thông tin headers, source file, section ID
+- Upload files → trả về job_id ngay lập tức
+- Worker xử lý background (ingest → chunk → embed → save)
+- Redis tracking batch progress
 
-### 3. Hybrid Search
+---
 
-- **BM25 Retriever**: Keyword-based search (sparse retrieval)
-- **Semantic Retriever**: Vector similarity search (dense retrieval)
-- **Ensemble Retriever**: Kết hợp 2 phương pháp với weights
+## 📝 Notes
 
-### 4. RAG Pipeline
+### Upload Order
 
-```
-Query → Query Expansion → Hybrid Search → Context Formatting → LLM Generation
-```
+⚠️ **Bắt buộc**: Upload summary documents trước, sau đó mới upload regular documents với `summary_id`
 
-## 🚀 Quick Start
+### Query Variants
 
-**Chạy lần đầu:**
+LLM tự động tạo biến thể câu hỏi để tăng khả năng tìm kiếm
 
-```bash
-# Bước 1: Cài đặt dependencies
-pip install -r requirements.txt
+### Fallback Mechanism
 
-# Bước 2: Chạy chương trình
-python -m src.main
+Nếu không tìm thấy summary docs hoặc score thấp → tìm kiếm trực tiếp trên toàn bộ child chunks
 
-# Bước 3: Chọn option 4 (Full Pipeline)
-# Nhập từ khóa: Hồ Chí Minh
-# Đợi xử lý...
-# Bắt đầu hỏi đáp!
-```
+---
 
-## 📊 Performance Tips
+## 🚀 Production Tips
 
-1. **Tăng retrieval quality:**
-   - Tăng `top_k` lên 15-20
-   - Tăng `semantic_weight` lên 0.6-0.7
+1. **Monitoring**: Thêm Prometheus + Grafana để monitor performance
+2. **Caching**: Redis cache cho frequent queries
+3. **Load Balancing**: Multiple workers cho heavy loads
+4. **Backup**: Định kỳ backup PostgreSQL database
+5. **Rate Limiting**: Thêm rate limiter cho API endpoints
 
-2. **Giảm latency:**
-   - Giảm `top_k` xuống 5
-   - Cache chunks trong memory
+---
 
-3. **Cải thiện chunking:**
-   - Giảm `chunk_size` xuống 500-600 (chunks nhỏ hơn, chính xác hơn)
-   - Tăng `chunk_overlap` lên 200 (giữ context tốt hơn)
+## 📄 License
 
-## 📞 Hỗ Trợ
-
-Nếu gặp vấn đề, kiểm tra:
-
-1. ✅ Đã cài đặt đủ thư viện
-2. ✅ Có API key hợp lệ
-3. ✅ Đã chạy Option 2 trước khi chat
-4. ✅ File markdown tồn tại trong `data/processed_data/`
-5. ✅ Có kết nối internet (để gọi API)
+MIT License
